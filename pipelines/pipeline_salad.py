@@ -14,7 +14,6 @@ from art_wb.attacks.evasion.sa_wb_network import SquareAttack_WB_network
 from art_wb.attacks.evasion.cw_wb import CarliniLInfMethod_WB
 
 from datasets.dataset import get_dataloader
-from config_reader_utls import attrDict, config_reader_utls
 from utils.utils_models import load_classifier, load_detectors
 
 
@@ -37,6 +36,8 @@ def execute_attack(attack_strategy, eps, norm, common_parameters):
                                              max_iter=10,
                                              batch_size=common_parameters['batch_size']
                                              )
+        attack_name = common_parameters['classifier_loss_name'] + "_pgd" + str(norm) if norm in [1, 2] else "i" + "_" + str(eps)
+
     elif attack_strategy == 'fgsm':
         attack = FastGradientSignMethod_WB(detectors_dict=common_parameters['detectors_dict'],
                                            classifier_loss_name=common_parameters['classifier_loss_name'],
@@ -46,6 +47,8 @@ def execute_attack(attack_strategy, eps, norm, common_parameters):
                                            eps_step=.01,
                                            batch_size=common_parameters['batch_size']
                                            )
+        attack_name = common_parameters['classifier_loss_name'] + "_fgsm_" + str(eps)
+
     elif attack_strategy == 'bim':
         attack = BasicIterativeMethod_WB(detectors_dict=common_parameters['detectors_dict'],
                                          classifier_loss_name=common_parameters['classifier_loss_name'],
@@ -56,6 +59,8 @@ def execute_attack(attack_strategy, eps, norm, common_parameters):
                                          max_iter=int(eps * 256 * 1.25),
                                          batch_size=common_parameters['batch_size']
                                          )
+        attack_name = common_parameters['classifier_loss_name'] + "_bim_" + str(eps)
+
     elif attack_strategy == 'sa':
         attack = SquareAttack_WB_network(detectors_dict=common_parameters['detectors_dict'],
                                          classifier_loss_name=common_parameters['classifier_loss_name'],
@@ -64,6 +69,8 @@ def execute_attack(attack_strategy, eps, norm, common_parameters):
                                          norm=np.inf,
                                          batch_size=common_parameters['batch_size']
                                          )
+        attack_name = "sa"
+
     elif attack_strategy == 'cwi':
         attack = CarliniLInfMethod_WB(detectors_dict=common_parameters['detectors_dict'],
                                       classifier_loss_name=common_parameters['classifier_loss_name'],
@@ -75,7 +82,9 @@ def execute_attack(attack_strategy, eps, norm, common_parameters):
                                       norm=np.inf,
                                       batch_size=common_parameters['batch_size']
                                       )
-    return attack
+        attack_name = "cwi"
+
+    return attack, attack_name
 
 
 
@@ -158,9 +167,9 @@ def main_pipeline_wb(args):
 
     detectors_dict = {'dtctrs': [detector], 'alphas': [.1], 'loss_dtctrs': [None]}
 
-    # ------------------------ #
-    # ---- Perform attack ---- #
-    # ------------------------ #
+    # --------------------------------- #
+    # ---- Perform and save attack ---- #
+    # --------------------------------- #
 
     features_ndarray = deepcopy(utils_general.FeaturesDataLoaderToNdarray(loader=data_loader))
     print('features_ndarray.shape:{}'.format(features_ndarray.shape))
@@ -176,8 +185,17 @@ def main_pipeline_wb(args):
     # the y in the method generate is the one given in input or it is computed from the model, usually reformatted as the
     # one-hot encoding of the class classes the x in the method generate is updated to create the adversarial attacks, pass
     # a deepcopy of the initial samples
-    adv_x = attack.generate(x=features_ndarray, y=labels.detach().cpu().numpy())
+    adv_x, attack_name = attack.generate(x=features_ndarray, y=labels.detach().cpu().numpy())
 
+
+    adv_file_path = '{}/{}/white-box-salad/{}{}.npy'.format(args.ADV_CREATION.adv_file_path,
+                                                            args.DATA_NATURAL.data_name,
+                                                            args.DATA_NATURAL.data_name,
+                                                            attack_name
+                                                            )
+    print(adv_file_path)
+    exit()
+    np.save(adv_file_path, adv_x)
 
     # ------------------------- #
     # ---- Evaluate attack ---- #
@@ -197,7 +215,6 @@ def main_pipeline_wb(args):
                                                                                            dataloader=data_loader_adv_detector,
                                                                                            device=device)
 
-    print(args_)
     print('Classifier', utils_ml.compute_accuracy(predictions=predictions_class, targets=labels_class))
     print(predictions_class)
     print(labels_class)
@@ -206,9 +223,4 @@ def main_pipeline_wb(args):
     print(predictions_det)
     print(labels_det)
 
-
-if __name__ == '__main__':
-    config_file_path = 'config/config_salad_wb.yaml'
-    args_ = attrDict.AttrDict.from_nested_dicts(config_reader_utls.read_file(file_path=config_file_path))
-    main_pipeline_wb(args=args_)
 

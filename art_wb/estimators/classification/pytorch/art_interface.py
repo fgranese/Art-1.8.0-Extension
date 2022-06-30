@@ -1,6 +1,5 @@
 import torch
-from art_wb.estimators.classification.pytorch import PyTorchClassifier
-
+from art.estimators.classification.pytorch import PyTorchClassifier
 
 class CustomPyTorchClassifier(PyTorchClassifier):
     def __init__(self, **kwargs):

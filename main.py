@@ -1,16 +1,11 @@
-# This is a sample Python script.
 
-# Press ⌃R to execute it or replace it with your code.
-# Press Double ⇧ to search everywhere for classes, files, tool windows, actions, and settings.
+def execute_pipeline_salad():
+    from pipelines.pipeline_salad import main_pipeline_wb
+    from config_reader_utls import attrDict, config_reader_utls
 
+    config_file_path = 'config/config_salad_wb.yaml'
+    args_ = attrDict.AttrDict.from_nested_dicts(config_reader_utls.read_file(file_path=config_file_path))
+    main_pipeline_wb(args=args_)
 
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press ⌘F8 to toggle the breakpoint.
-
-
-# Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    print_hi('PyCharm')
-
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+    execute_pipeline_salad()
