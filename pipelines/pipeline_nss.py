@@ -22,7 +22,7 @@ def execute_attack(attack_strategy, common_parameters):
     attack = SquareAttack_WB_nss(detectors_dict=common_parameters['detectors_dict'],
                                      classifier_loss_name=common_parameters['classifier_loss_name'],
                                      estimator=common_parameters['estimator'],
-                                     max_iter=200,
+                                     max_iter=1,
                                      norm=np.inf,
                                      batch_size=common_parameters['batch_size']
                                      )
@@ -138,6 +138,7 @@ def main_pipeline_wb(args):
     # ------------------------- #
 
     from utils.utils_general import from_numpy_to_dataloader
+    from detectors.nss.nss import extract_nss_features
     # Compute accuracy of the classifier on the attack
     data_loader_adv_classifier = from_numpy_to_dataloader(adv_x, labels, batch_size=args.RUN.batch_size)
     logits_class, labels_class, predictions_class = utils_ml.compute_logits_return_labels_and_predictions(model=classifier,
@@ -146,7 +147,8 @@ def main_pipeline_wb(args):
     labels_det = np.where(labels_class == predictions_class, 0, 1)
 
     # Compute accuracy of the detector on the attack
-    data_loader_adv_detector = from_numpy_to_dataloader(logits_class, labels_det, batch_size=args.RUN.batch_size)
+    nss_features = extract_nss_features(adv_x)
+    data_loader_adv_detector = from_numpy_to_dataloader(nss_features, labels_det, batch_size=args.RUN.batch_size)
     _, labels_det, predictions_det = utils_ml.compute_logits_return_labels_and_predictions(model=detector,
                                                                                            dataloader=data_loader_adv_detector,
                                                                                            device=device)

@@ -6,7 +6,7 @@ from detectors.nss.MSCN import calculate_brisque_features
 def extract_nss_features(data: np.ndarray):
 
     adv_data_f = np.array([])
-    for img in tqdm(data, ascii=True, ncols=70, colour='green'):
+    for img in data:
         parameters = calculate_brisque_features(img)
         parameters = parameters.reshape((1, -1))
         if adv_data_f.size == 0:

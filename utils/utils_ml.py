@@ -1,9 +1,10 @@
+import numpy as np
 import torch
 from tqdm import tqdm
 from typing import Union
 import torch.nn.functional as trchfnctnl
-from art_wb.estimators.classification.pytorch.art_interface import CustomPyTorchClassifier
-from art.estimators.classification.pytorch import PyTorchClassifier
+from art_wb.estimators.classification.pytorch.art_interface import CustomPyTorchClassifier, PyTorchClassifier
+from art_wb.estimators.classification.scikitlearn.art_interface import CustomScikitlearnSVC, ScikitlearnSVC
 
 
 def compute_accuracy(predictions: torch.tensor, targets: torch.tensor):
@@ -40,12 +41,16 @@ def compute_logits_return_labels_and_predictions(model: Union[torch.nn.Module, P
             # isintance() considers every instance an instance of the parent class as well
             elif type(model) in [PyTorchClassifier, CustomPyTorchClassifier]:
                 preds_logit = model._get_last_layer_outs(data.to(device))
+            elif type(model) in [ScikitlearnSVC, CustomScikitlearnSVC]:
+                preds_logit = torch.Tensor(model.predict(data))
             else:
                 raise NotImplementedError
 
             logits.append(preds_logit.detach().cpu())
 
-            if preds_logit.shape[1] > 2:
+            if type(model) in [ScikitlearnSVC, CustomScikitlearnSVC]:
+                soft_prob = preds_logit
+            elif preds_logit.shape[1] >= 2:
                 soft_prob = trchfnctnl.softmax(preds_logit, dim=1)
             else:
                 soft_prob = trchfnctnl.sigmoid(preds_logit)
@@ -53,7 +58,7 @@ def compute_logits_return_labels_and_predictions(model: Union[torch.nn.Module, P
             if 'print_sp' in kwargs:
                 if kwargs['print_sp']:
                     print(soft_prob)
-            if preds_logit.shape[1] > 2:
+            if preds_logit.shape[1] >= 2:
                 preds = torch.argmax(soft_prob, dim=1)
             else:
                 preds = torch.round(soft_prob)
