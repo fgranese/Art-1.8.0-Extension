@@ -28,8 +28,8 @@ DETECTOR:
   resume_epoch: 100 # checkpoint to load at testing time or epoch to resume training
 
 ADV_CREATION:
-  epsilon: 40
-  norm: 1 # 1, 2, 'inf', np.inf
-  strategy: 'sa' # pgd, fgsm, bim, sa, cwi
+  epsilon: 0.125
+  norm: 'inf' # 1, 2, 'inf', np.inf
+  strategy: 'cwi' # pgd, fgsm, bim, sa, cwi
   adv_file_path: '/scratch/fgranese/data_projects/FARAD/detectors/adv_data/'
 

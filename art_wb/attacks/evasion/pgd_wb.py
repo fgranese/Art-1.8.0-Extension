@@ -343,6 +343,8 @@ def get_composite_gradient(classifier, classifier_loss_name, detectors_list, alp
 
 def create_labels_detector(logits_class, y_class, device):
     y_pred_class = np.argmax(torch.softmax(logits_class, dim=1).detach().cpu().numpy(), axis=1)
+    if not isinstance(y_class, np.ndarray):
+            y_class = y_class.detach().cpu()
     y_class = np.argmax(y_class, axis=1)
     # y_det_1 = np.where(y_pred_class == y_class, 0., 1.)
     # print((y_det_1))

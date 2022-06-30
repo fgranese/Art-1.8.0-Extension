@@ -1,3 +1,4 @@
+import os
 import torch
 import losses
 import numpy as np
@@ -74,12 +75,11 @@ def execute_attack(attack_strategy, eps, norm, common_parameters):
     elif attack_strategy == 'cwi':
         attack = CarliniLInfMethod_WB(detectors_dict=common_parameters['detectors_dict'],
                                       classifier_loss_name=common_parameters['classifier_loss_name'],
-                                      estimator=common_parameters['estimator'],
+                                      classifier=common_parameters['estimator'],
                                       confidence=0.0,
                                       targeted=False,
                                       learning_rate=.01,
-                                      max_iter=200,
-                                      norm=np.inf,
+                                      max_iter=10, #200
                                       batch_size=common_parameters['batch_size']
                                       )
         attack_name = "_cwi"
@@ -166,7 +166,7 @@ def main_pipeline_wb(args):
     # adapt the interface to be parallelized
     detector._to_data_parallel()
 
-    detectors_dict = {'dtctrs': [detector], 'alphas': [.1], 'loss_dtctrs': [None]}
+    detectors_dict = {'dtctrs': [detector], 'alphas': [1], 'loss_dtctrs': [None]}
 
     # --------------------------------- #
     # ---- Perform and save attack ---- #
@@ -183,6 +183,7 @@ def main_pipeline_wb(args):
                                  'verbose' : True}
 
     attack, attack_name = execute_attack(attack_strategy=attack_strategy, eps=args.ADV_CREATION.epsilon, norm=args.ADV_CREATION.norm, common_parameters=parameters_common_attacks)
+    os.makedirs('{}/{}/white-box-salad/'.format(args.ADV_CREATION.adv_file_path, args.DATA_NATURAL.data_name), exist_ok=True)
     adv_file_path = '{}/{}/white-box-salad/{}{}.npy'.format(args.ADV_CREATION.adv_file_path,
                                                             args.DATA_NATURAL.data_name,
                                                             args.DATA_NATURAL.data_name,
