@@ -208,7 +208,7 @@ def main_pipeline_wb(args):
 
 
 if __name__ == '__main__':
-    config_file_path = 'config/config_wb.yaml'
+    config_file_path = 'config/config_salad_wb.yaml'
     args_ = attrDict.AttrDict.from_nested_dicts(config_reader_utls.read_file(file_path=config_file_path))
     main_pipeline_wb(args=args_)
 

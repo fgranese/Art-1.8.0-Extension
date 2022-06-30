@@ -28,8 +28,6 @@ DETECTOR:
   resume_epoch: 100 # checkpoint to load at testing time or epoch to resume training
 
 ADV_CREATION:
-  step_size: 4
   epsilon: 40
-  perturb_step: 10
-  norm: 1 # 1, 2, 'inf'
-  strategy: 'pgdi' # pgdi, fgsm, bim, sa, cwi
+  norm: 1 # 1, 2, 'inf', np.inf
+  strategy: 'pgdi' # pgd, fgsm, bim, sa, cwi
