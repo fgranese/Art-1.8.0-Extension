@@ -36,7 +36,7 @@ def execute_attack(attack_strategy, eps, norm, common_parameters):
                                              max_iter=10,
                                              batch_size=common_parameters['batch_size']
                                              )
-        attack_name = common_parameters['classifier_loss_name'] + "_pgd" + str(norm) if norm in [1, 2] else "i" + "_" + str(eps)
+        attack_name = common_parameters['classifier_loss_name'] + "_pgd" + (str(norm) if norm in [1, 2] else "i") + "_" + str(eps)
 
     elif attack_strategy == 'fgsm':
         attack = FastGradientSignMethod_WB(detectors_dict=common_parameters['detectors_dict'],
@@ -69,7 +69,7 @@ def execute_attack(attack_strategy, eps, norm, common_parameters):
                                          norm=np.inf,
                                          batch_size=common_parameters['batch_size']
                                          )
-        attack_name = "sa"
+        attack_name = "_sa"
 
     elif attack_strategy == 'cwi':
         attack = CarliniLInfMethod_WB(detectors_dict=common_parameters['detectors_dict'],
@@ -82,7 +82,7 @@ def execute_attack(attack_strategy, eps, norm, common_parameters):
                                       norm=np.inf,
                                       batch_size=common_parameters['batch_size']
                                       )
-        attack_name = "cwi"
+        attack_name = "_cwi"
 
     return attack, attack_name
 
@@ -123,6 +123,7 @@ def main_pipeline_wb(args):
         loss=losses.losses_classifier._get_loss_by_name(loss_name=args.CLASSIFIER.loss),
         input_shape=classifier_input_shape,
         nb_classes=args.DATA_NATURAL.num_classes,
+        clip_values=[0, 1]
     )
 
     # adapt the interface to be parallelized
@@ -181,20 +182,18 @@ def main_pipeline_wb(args):
                                  'batch_size': args.RUN.batch_size,
                                  'verbose' : True}
 
-    attack = execute_attack(attack_strategy=attack_strategy, eps=args.ADV_CREATION.epsilon, norm=args.ADV_CREATION.norm, common_parameters=parameters_common_attacks)
-    # the y in the method generate is the one given in input or it is computed from the model, usually reformatted as the
-    # one-hot encoding of the class classes the x in the method generate is updated to create the adversarial attacks, pass
-    # a deepcopy of the initial samples
-    adv_x, attack_name = attack.generate(x=features_ndarray, y=labels.detach().cpu().numpy())
-
-
+    attack, attack_name = execute_attack(attack_strategy=attack_strategy, eps=args.ADV_CREATION.epsilon, norm=args.ADV_CREATION.norm, common_parameters=parameters_common_attacks)
     adv_file_path = '{}/{}/white-box-salad/{}{}.npy'.format(args.ADV_CREATION.adv_file_path,
                                                             args.DATA_NATURAL.data_name,
                                                             args.DATA_NATURAL.data_name,
                                                             attack_name
                                                             )
     print(adv_file_path)
-    exit()
+
+    # the y in the method generate is the one given in input or it is computed from the model, usually reformatted as the
+    # one-hot encoding of the class classes the x in the method generate is updated to create the adversarial attacks, pass
+    # a deepcopy of the initial samples
+    adv_x = attack.generate(x=features_ndarray, y=labels.detach().cpu().numpy())
     np.save(adv_file_path, adv_x)
 
     # ------------------------- #

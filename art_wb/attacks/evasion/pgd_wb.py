@@ -9,7 +9,7 @@ import numpy as np
 from tqdm import tqdm
 from typing import Union
 from typing import Optional
-from losses import losses
+from losses import losses_classifier
 from art.config import ART_NUMPY_DTYPE
 from art.utils import compute_success, random_sphere, compute_success_array
 from art.attacks.evasion.projected_gradient_descent.projected_gradient_descent_pytorch import \
@@ -320,13 +320,13 @@ def get_composite_gradient(classifier, classifier_loss_name, detectors_list, alp
     classifier_outs_init = classifier._get_last_layer_outs(x_init)
     y_cold_version = torch.argmax(y, dim=1)
 
-    loss = losses.global_loss(loss_name=classifier_loss_name,
+    loss = losses_classifier.global_loss(loss_name=classifier_loss_name,
                                          preds=classifier_outs, y=y_cold_version, nat=classifier_outs_init)
     for i in range(len(detectors_list)):
         detector = detectors_list[i]
         alpha = alphas_list[i] if alphas_list[i] is not None else 1.
         detector_loss = loss_dtctrs_list[i] if loss_dtctrs_list[
-                                                   i] is not None else losses._get_loss_by_name('BCE')
+                                                   i] is not None else losses_classifier._get_loss_by_name('BCE')
 
         dtctr_outs = detector._get_last_layer_outs(classifier_outs)
         # print(dtctr_outs)
