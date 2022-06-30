@@ -144,7 +144,7 @@ def main_pipeline_wb(args):
                                   model=classifier_model,
                                   device=device,
                                   epsilon=args.DETECTOR.epsilon,
-                                  loss=args.DETECTOR.loss)
+                                  loss=args.CLASSIFIER.loss)
 
     assert len(detectors) == 1, 'load_detectors returns a list of detectors but we want the list to have length 1'
 
@@ -166,7 +166,7 @@ def main_pipeline_wb(args):
     # adapt the interface to be parallelized
     detector._to_data_parallel()
 
-    detectors_dict = {'dtctrs': [detector], 'alphas': [1], 'loss_dtctrs': [None]}
+    detectors_dict = {'dtctrs': [detector], 'alphas': [.1], 'loss_dtctrs': [None]}
 
     # --------------------------------- #
     # ---- Perform and save attack ---- #

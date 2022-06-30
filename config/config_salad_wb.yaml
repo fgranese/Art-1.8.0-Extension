@@ -9,7 +9,7 @@ RUN:
 CLASSIFIER:
   classifier_dir: '/scratch/fgranese/Mead-detector/checkpoints/classifiers/' # directory containing the classifier model
   # loss used to fool the model
-  loss: 'CE'
+  loss: 'Rao'
 
 DETECTOR:
   detector_dir: '/scratch/fgranese/Mead-detector/checkpoints/detectors/'
@@ -21,7 +21,7 @@ DETECTOR:
   momentum: 0.
   weight_decay: 0.0005
   nesterov: False
-  loss: 'CE' # loss used to train the detector we are loading
+#  loss: 'Rao' # loss used to train the detector we are loading
   loss_adv: null # loss used to attack the detector
   beta: -1
   epsilon: 0.125
@@ -30,6 +30,6 @@ DETECTOR:
 ADV_CREATION:
   epsilon: 0.125
   norm: 'inf' # 1, 2, 'inf', np.inf
-  strategy: 'cwi' # pgd, fgsm, bim, sa, cwi
+  strategy: 'bim' # pgd, fgsm, bim, sa, cwi
   adv_file_path: '/scratch/fgranese/data_projects/FARAD/detectors/adv_data/'
 
