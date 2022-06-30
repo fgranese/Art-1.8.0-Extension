@@ -1,0 +1,35 @@
+DATA_NATURAL:
+  data_name: cifar10
+  num_classes: 10
+
+RUN:
+  seed: 1
+  batch_size: 500
+
+CLASSIFIER:
+  classifier_dir: checkpoints/classifiers/ # directory containing the classifier model
+  # loss used to fool the model
+  loss: 'CE'
+
+DETECTOR:
+  detector_dir: '/scratch/fgranese/Mead-detector/checkpoints/detectors'
+  DETECTOR_MODEL: # To change the structure of the detector
+    layers: 3
+    nodes: 256
+    save_freq: 1
+  lr: 0.01
+  momentum: 0.
+  weight_decay: 0.0005
+  nesterov: False
+  loss: 'CE' # loss used to train the detector we are loading
+  loss_adv: null # loss used to attack the detector
+  beta: -1
+  epsilon: 0.125
+  resume_epoch: 100 # checkpoint to load at testing time or epoch to resume training
+
+ADV_CREATION:
+  step_size: 4
+  epsilon: 40
+  perturb_step: 10
+  norm: 1 # 1, 2, 'inf'
+  strategy: 'pgdi' # pgdi, fgsm, bim, sa, cwi
