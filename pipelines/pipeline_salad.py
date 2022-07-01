@@ -79,7 +79,7 @@ def execute_attack(attack_strategy, eps, norm, common_parameters):
                                       confidence=0.0,
                                       targeted=False,
                                       learning_rate=.01,
-                                      max_iter=10, #200
+                                      max_iter=100, #200
                                       batch_size=common_parameters['batch_size']
                                       )
         attack_name = "_cwi"
@@ -166,7 +166,7 @@ def main_pipeline_wb(args):
     # adapt the interface to be parallelized
     detector._to_data_parallel()
 
-    detectors_dict = {'dtctrs': [detector], 'alphas': [0], 'loss_dtctrs': [None]}
+    detectors_dict = {'dtctrs': [detector], 'alphas': args.ADV_CREATION.alpha, 'loss_dtctrs': [None]}
 
     # --------------------------------- #
     # ---- Perform and save attack ---- #
