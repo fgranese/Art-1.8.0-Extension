@@ -88,7 +88,7 @@ def execute_attack(attack_strategy, eps, norm, common_parameters):
 
 
 
-def main_pipeline_wb(args):
+def main_pipeline_wb(args, loss=None, eps=None, alpha=None):
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
     print(device)
 
@@ -120,7 +120,7 @@ def main_pipeline_wb(args):
     # transform the classifier in an art kind of network using the interface
     classifier = art_interface.CustomPyTorchClassifier(
         model=classifier_model,
-        loss=losses.losses_classifier._get_loss_by_name(loss_name=args.CLASSIFIER.loss),
+        loss=losses.losses_classifier._get_loss_by_name(loss_name=args.CLASSIFIER.loss) if loss is None else loss,
         input_shape=classifier_input_shape,
         nb_classes=args.DATA_NATURAL.num_classes,
         clip_values=[0, 1]
@@ -144,7 +144,7 @@ def main_pipeline_wb(args):
                                   model=classifier_model,
                                   device=device,
                                   epsilon=args.DETECTOR.epsilon,
-                                  loss=args.CLASSIFIER.loss)
+                                  loss=args.CLASSIFIER.loss if loss is None else loss)
 
     assert len(detectors) == 1, 'load_detectors returns a list of detectors but we want the list to have length 1'
 
@@ -166,7 +166,7 @@ def main_pipeline_wb(args):
     # adapt the interface to be parallelized
     detector._to_data_parallel()
 
-    detectors_dict = {'dtctrs': [detector], 'alphas': args.ADV_CREATION.alpha, 'loss_dtctrs': [None]}
+    detectors_dict = {'dtctrs': [detector], 'alphas': args.ADV_CREATION.alpha if alpha is None else [alpha], 'loss_dtctrs': [None]}
 
     # --------------------------------- #
     # ---- Perform and save attack ---- #
@@ -177,25 +177,29 @@ def main_pipeline_wb(args):
 
     attack_strategy = args.ADV_CREATION.strategy
     parameters_common_attacks = {'detectors_dict': detectors_dict,
-                                 'classifier_loss_name': args.CLASSIFIER.loss,
+                                 'classifier_loss_name': args.CLASSIFIER.loss if loss is None else loss,
                                  'estimator': classifier,
                                  'batch_size': args.RUN.batch_size,
                                  'verbose' : True}
 
-    attack, attack_name = execute_attack(attack_strategy=attack_strategy, eps=args.ADV_CREATION.epsilon, norm=args.ADV_CREATION.norm, common_parameters=parameters_common_attacks)
+    attack, attack_name = execute_attack(attack_strategy=attack_strategy, eps=args.ADV_CREATION.epsilon if eps is None else eps, norm=args.ADV_CREATION.norm, common_parameters=parameters_common_attacks)
     os.makedirs('{}/{}/white-box-salad/'.format(args.ADV_CREATION.adv_file_path, args.DATA_NATURAL.data_name), exist_ok=True)
-    adv_file_path = '{}/{}/white-box-salad/{}{}.npy'.format(args.ADV_CREATION.adv_file_path,
+    adv_file_path = '{}/{}/white-box-salad/{}{}_alpha_{}.npy'.format(args.ADV_CREATION.adv_file_path,
                                                             args.DATA_NATURAL.data_name,
                                                             args.DATA_NATURAL.data_name,
-                                                            attack_name
+                                                            attack_name,
+                                                            args.ADV_CREATION.alpha[0] if alpha is None else alpha
                                                             )
     print(adv_file_path)
 
-    # the y in the method generate is the one given in input or it is computed from the model, usually reformatted as the
-    # one-hot encoding of the class classes the x in the method generate is updated to create the adversarial attacks, pass
-    # a deepcopy of the initial samples
-    adv_x = attack.generate(x=features_ndarray, y=labels.detach().cpu().numpy())
-    np.save(adv_file_path, adv_x)
+    if os.path.exists(adv_file_path):
+        adv_x = np.load(adv_file_path)
+    else:
+        # the y in the method generate is the one given in input or it is computed from the model, usually reformatted as the
+        # one-hot encoding of the class classes the x in the method generate is updated to create the adversarial attacks, pass
+        # a deepcopy of the initial samples
+        adv_x = attack.generate(x=features_ndarray, y=labels.detach().cpu().numpy())
+        np.save(adv_file_path, adv_x)
 
     # ------------------------- #
     # ---- Evaluate attack ---- #
@@ -215,12 +219,16 @@ def main_pipeline_wb(args):
                                                                                            dataloader=data_loader_adv_detector,
                                                                                            device=device)
 
-    print('Classifier', utils_ml.compute_accuracy(predictions=predictions_class, targets=labels_class))
+    acc_c = utils_ml.compute_accuracy(predictions=predictions_class, targets=labels_class)
+    acc_d = utils_ml.compute_accuracy(predictions=predictions_det, targets=labels_det)
+    print('Classifier', acc_c)
     print(predictions_class)
     print(labels_class)
 
-    print('Detector', utils_ml.compute_accuracy(predictions=predictions_det, targets=labels_det))
+    print('Detector', acc_d)
     print(predictions_det)
     print(labels_det)
+
+    return acc_c.item(), acc_d.item()
 
 
