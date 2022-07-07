@@ -38,7 +38,7 @@ class DataDepth:
             M = X @ U.T.numpy()
         else:
             M = X @ U.T
-        for i in tqdm(range(self.K), "Projection", position=0, leave=True, colour='green', ncols=100, ascii=True):
+        for i in range(self.K):#tqdm(range(self.K), "Projection", position=0, leave=True, colour='green', ncols=100, ascii=True):
             try:
                 subsample = np.random.choice(np.arange(n), size=psi, replace=False)
             except:
@@ -66,7 +66,7 @@ class DataDepth:
                 M_test = X_test @ U.T.numpy()
             else:
                 M_test = X_test @ U.T
-            for i in tqdm(range(self.K), "Projection", position=0, leave=True, colour='green', ncols=100, ascii=True):
+            for i in range(self.K):#tqdm(range(self.K), "Projection", position=0, leave=True, colour='green', ncols=100, ascii=True):
                 Score_test += mass_left[i] * (M_test[:, i] < s[i]) + mass_right[i] * (
                         M_test[:, i] > s[i]
                 )

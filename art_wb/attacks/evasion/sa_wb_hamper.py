@@ -15,31 +15,44 @@ from art.attacks.evasion import SquareAttack
 
 logger = logging.getLogger(__name__)
 
-def compute_nss_features(data):
-    from detectors.nss.nss import extract_nss_features
+def compute_hamper_features(data, classifier, layers_dict_train, y_train, K, layers, num_classes, batch_size):
+    from detectors.hamper.utils_depth import  depth_from_dict, merge_layers_from_dict
+    from utils.utils_models import extraction_resnet
+    from sklearn import preprocessing
 
-    return extract_nss_features(data)
+    layers_dic_test = extraction_resnet(data, classifier, bs=batch_size)
+    depth_dic = depth_from_dict(dict_train=layers_dict_train, y_train=y_train, dict_test=layers_dic_test, K=K, layers=layers, num_classes=num_classes)
+    combined_layers = merge_layers_from_dict(dict=depth_dic, num_classes=num_classes, layers_names=layers)  # Combine layers
+    combined_layers = preprocessing.normalize(combined_layers)
 
-def adv_criterion(logits_class, y_class, prob_det):
+    return combined_layers
+
+def adv_criterion(logits_class, y_class, prob_det, threshold):
+    prob_det = prob_det.detach().cpu().numpy()
     y_pred_class = np.argmax(torch.softmax(logits_class, dim=1).detach().cpu().numpy(), axis=1)
-    y_pred_det = np.argmax(prob_det.detach().cpu().numpy(), axis=1)
+    # y_pred_det = np.argmax(prob_det.detach().cpu().numpy(), axis=1)
     y_class = np.argmax(y_class, axis=1)
-    y_det = np.where(y_pred_class == y_class, 0, 1)
-    return (y_pred_class != y_class) & (y_pred_det.reshape(y_det.shape) != y_det)
+    return (y_pred_class != y_class) & (prob_det < threshold)
 
 
 class SquareAttack_WB_hamper(SquareAttack):
-    def __init__(self, detectors_dict: dict, classifier_loss_name: str, **kwargs):
-
+    def __init__(self, detectors_dict: dict, classifier_loss_name: str, threshold: float, y_train: np.ndarray,
+                 K: int, num_classes: int, layers: list, dict_train: dict, **kwargs):
         assert len(detectors_dict['dtctrs']) > 0, 'At least one detector must be passed'
         lsts = [detectors_dict['dtctrs'], detectors_dict['alphas'], detectors_dict['loss_dtctrs']]
         if not all(len(lsts[0]) == len(l) for l in lsts[1:]):
             raise ValueError('The lists have different lengths in: {}'.format(inspect.stack()[1][3]))
-
+        self.alphas_list = detectors_dict['alphas']
         self.detectors_list = detectors_dict['dtctrs']
         self.alphas_list = detectors_dict['alphas']
         self.loss_dtctrs_list = detectors_dict['loss_dtctrs']
         self.classifier_loss_name = classifier_loss_name
+        self.threshold = threshold
+        self.y_train = y_train
+        self.K = K
+        self.num_classes = num_classes
+        self.layers = layers
+        self.dict_train = dict_train
         kwargs['adv_criterion'] = adv_criterion
 
         super().__init__(**kwargs)
@@ -91,10 +104,17 @@ class SquareAttack_WB_hamper(SquareAttack):
             # Determine correctly predicted samples classifier and detector (predict returns logits)
             logits_class = torch.Tensor(self.estimator.predict(x_adv, batch_size=self.batch_size))
             detector = self.detectors_list[0]
-            nss_features = compute_nss_features(x_adv)
-            prob_det = torch.Tensor(detector.predict(nss_features, batch_size=self.batch_size))
+            hamper_features = compute_hamper_features(data=x_adv,
+                                                      classifier=self.estimator,
+                                                      layers_dict_train=self.dict_train,
+                                                      y_train=self.y_train,
+                                                      K=self.K,
+                                                      num_classes=self.num_classes,
+                                                      batch_size=self.batch_size,
+                                                      layers=self.layers)
 
-            sample_is_robust = np.logical_not(self.adv_criterion(logits_class, y_class, prob_det))
+            prob_det = torch.Tensor(detector.predict(hamper_features, batch_size=self.batch_size))
+            sample_is_robust = np.logical_not(self.adv_criterion(logits_class, y_class, prob_det, self.threshold))
 
             if np.sum(sample_is_robust) == 0:
                 break
@@ -134,10 +154,16 @@ class SquareAttack_WB_hamper(SquareAttack):
                     # Determine correctly predicted samples classifier and detector (predict returns logits)
                     logits_class = torch.Tensor(self.estimator.predict(x_adv, batch_size=self.batch_size))
                     detector = self.detectors_list[0]
-                    nss_features = compute_nss_features(x_adv)
-                    prob_det = torch.Tensor(detector.predict(nss_features, batch_size=self.batch_size))
+                    hamper_features = compute_hamper_features(data=x_adv,
+                                                              classifier=self.estimator,
+                                                              layers_dict_train=self.dict_train,
+                                                              y_train=self.y_train,
+                                                              K=self.K,
+                                                              num_classes=self.num_classes,
+                                                              batch_size=self.batch_size,
+                                                              layers=self.layers)
 
-                    sample_is_robust = np.logical_not(self.adv_criterion(logits_class, y_class, prob_det))
+                    prob_det = torch.Tensor(detector.predict(hamper_features, batch_size=self.batch_size))
 
                     if np.sum(sample_is_robust) == 0:
                         break
@@ -265,10 +291,16 @@ class SquareAttack_WB_hamper(SquareAttack):
                     # Determine correctly predicted samples classifier and detector (predict returns logits)
                     logits_class = torch.Tensor(self.estimator.predict(x_adv, batch_size=self.batch_size))
                     detector = self.detectors_list[0]
-                    nss_features = compute_nss_features(x_adv)
-                    prob_det = torch.Tensor(detector.predict(nss_features, batch_size=self.batch_size))
+                    hamper_features = compute_hamper_features(data=x_adv,
+                                                              classifier=self.estimator,
+                                                              layers_dict_train=self.dict_train,
+                                                              y_train=self.y_train,
+                                                              K=self.K,
+                                                              num_classes=self.num_classes,
+                                                              batch_size=self.batch_size,
+                                                              layers=self.layers)
 
-                    sample_is_robust = np.logical_not(self.adv_criterion(logits_class, y_class, prob_det))
+                    prob_det = torch.Tensor(detector.predict(hamper_features, batch_size=self.batch_size))
 
                     if np.sum(sample_is_robust) == 0:
                         break

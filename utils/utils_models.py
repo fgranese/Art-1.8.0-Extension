@@ -4,7 +4,8 @@ import math
 import torch.nn.functional as F
 from models.detector import Detector
 import torch.optim as optim
-
+from tqdm import tqdm
+from art_wb.estimators.classification.pytorch.art_interface import CustomPyTorchClassifier, PyTorchClassifier
 
 def create_detectors(args, model, device, **kwargs):
     detectors = []
@@ -89,16 +90,22 @@ def load_detectors(args, model, device, epsilon=None, loss: str = None):
 
     return detectors, optimizers
 
+
+
 def extraction_resnet(loader, model, device="cuda", bs=100):
+    device = model.device
+    if type(model) in [CustomPyTorchClassifier, PyTorchClassifier]:
+        model = model.model
+    if isinstance(loader, np.ndarray):
+        from utils.utils_general import from_numpy_to_dataloader
+        loader = from_numpy_to_dataloader(loader, np.ones(loader.shape[0]), bs)
 
+    all_hidden_states = {}
     with torch.no_grad():
-        num_batches = math.ceil(loader.shape[0] / bs)
-        for i in range(num_batches):
-            if i == 0:
-                data = torch.tensor(loader[i * bs: (i + 1) * bs]).to(device)
-                all_hidden_states = { }
-                hidden_states = data
-
+        for batch_idx, (data, target) in enumerate(tqdm(loader, ascii=True, ncols=70)):
+            data = data.to(device)
+            hidden_states = data
+            if batch_idx == 0:
                 # Conv1
                 hidden_states = model.conv1(hidden_states)
 
@@ -163,11 +170,7 @@ def extraction_resnet(loader, model, device="cuda", bs=100):
                 all_hidden_states['logits'] = logits.detach().cpu().numpy()
                 pred = torch.nn.Softmax(dim=1)(logits)
                 all_hidden_states['pred'] = pred.detach().cpu().numpy()
-
             else:
-                data = torch.tensor(loader[i * bs: (i + 1) * bs]).to(device)
-                hidden_states = data
-
                 # Conv1
                 hidden_states = model.conv1(hidden_states)
                 # Bn1
@@ -234,7 +237,5 @@ def extraction_resnet(loader, model, device="cuda", bs=100):
                 all_hidden_states['logits'] = np.concatenate((all_hidden_states['logits'], logits.detach().cpu().numpy()), axis=0)
                 pred = torch.nn.Softmax(dim=1)(logits)
                 all_hidden_states['pred'] = np.concatenate((all_hidden_states['pred'], pred.detach().cpu().numpy()), axis=0)
-
-    print(all_hidden_states.keys())
 
     return all_hidden_states

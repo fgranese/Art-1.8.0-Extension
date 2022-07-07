@@ -5,8 +5,10 @@ from detectors.hamper.data_depth import DataDepth, sampled_sphere
 from utils.utils_models import extraction_resnet
 
 def depth_by_class(depth, X_train, X_test, y_train, c, layer, U=None):
-    X_train_c = X_train[np.where(np.argmax(y_train, axis=1) == c)]
-    res = depth.halfspace_mass(X=X_train_c, X_test=X_test, U=U, layer=layer, num_class=c)
+    if len(y_train.shape) > 1:
+        y_train = np.argmax(y_train, axis=1)
+    X_train_c = X_train[np.where(y_train == c)]
+    res = depth.halfspace_mass(X=X_train_c, X_test=X_test, U=U)
     return res
 
 def merge_layers_from_dict(dict, num_classes, layers_names):
@@ -30,7 +32,7 @@ def depth_from_dict(dict_train, y_train, dict_test, K, layers, num_classes):
         depth_res[layer] = []
         for c in range(num_classes):
             X_test = dict_test[layer]
-            logging.info(X_test.shape)
+            #logging.info(X_test.shape)
             X_train = dict_train[layer]
             X_train = X_train.reshape(X_train.shape[0], -1)
             X_test = X_test.reshape(X_test.shape[0], -1)
@@ -48,8 +50,3 @@ def depth_from_dict(dict_train, y_train, dict_test, K, layers, num_classes):
             depth_res[layer].append(res)
         logging.info(layer)
     return depth_res
-
-def get_depth_score(data, model, layers_dict_train, y_train, K, layers, num_classes, batch_size):
-    layers_dic_test = extraction_resnet(loader=data, model=model, bs=batch_size)
-    depth_dic = depth_from_dict(dict_train=layers_dict_train, y_train=y_train, dict_test=layers_dic_test, K=K, layers=layers, num_classes=num_classes)
-    return depth_dic

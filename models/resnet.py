@@ -294,7 +294,45 @@ class ResNet(nn.Module):
     def intermediate_forward(self, input):
         return [self.forward(input)]
 
+    # def layer_1(self, input):
+    #     out = F.relu(self.bn1(self.conv1(input)))
+    #     out = self.layer1(out)
+    #     out = self.layer2(out)
+    #     out = self.layer3(out)
+    #     out = self.layer4(out)
+    #     out = F.avg_pool2d(out, 4)
+    #     out = out.view(out.size(0), -1)
+    #     return out
+    def process_input_for_blocks_output(self, x):
+        return F.relu(self.bn1(self.conv1(x)))
+
     def layer_1(self, input):
+        out = F.relu(self.bn1(self.conv1(input)))
+        out = self.layer1(out)
+        return out
+
+    def layer_2(self, input):
+        out = F.relu(self.bn1(self.conv1(input)))
+        out = self.layer1(out)
+        out = self.layer2(out)
+        return out
+
+    def layer_3(self, input):
+        out = F.relu(self.bn1(self.conv1(input)))
+        out = self.layer1(out)
+        out = self.layer2(out)
+        out = self.layer3(out)
+        return out
+
+    def layer_4(self, input):
+        out = F.relu(self.bn1(self.conv1(input)))
+        out = self.layer1(out)
+        out = self.layer2(out)
+        out = self.layer3(out)
+        out = self.layer4(out)
+        return out
+
+    def convolution_end(self, input):
         out = F.relu(self.bn1(self.conv1(input)))
         out = self.layer1(out)
         out = self.layer2(out)
@@ -303,6 +341,7 @@ class ResNet(nn.Module):
         out = F.avg_pool2d(out, 4)
         out = out.view(out.size(0), -1)
         return out
+
 
 
 def ResNet18(num_classes):

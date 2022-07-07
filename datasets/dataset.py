@@ -61,29 +61,35 @@ def load_svhn_data():
     return (x_train, y_train), (x_test, y_test), min, max
 
 
-def get_dataloader_from_dataset_name(dataset_name: str, batch_size: int, train: bool, shuffle=False):
+def get_dataloader_from_dataset_name(dataset_name: str, batch_size: int, train: bool, shuffle=False, return_numpy=False):
     dataset_name = dataset_name.upper()
     if dataset_name == CIFAR10:
-        dataloader = get_CIFAR10(batch_size=batch_size, train=train, shuffle=shuffle)
+        dataloader = get_CIFAR10(batch_size=batch_size, train=train, shuffle=shuffle, return_numpy=return_numpy)
     elif dataset_name == SVHN:
-        dataloader = get_SVHN(batch_size=batch_size, train=train, shuffle=shuffle)
+        dataloader = get_SVHN(batch_size=batch_size, train=train, shuffle=shuffle, return_numpy=return_numpy)
     else:
         sys.exit('Requested dataset not available.')
     return dataloader
 
 
-def get_CIFAR10(batch_size: int, train=False, shuffle=False):
+def get_CIFAR10(batch_size: int, train=False, shuffle=False, return_numpy=False):
     (x_train, y_train), (x_test, y_test), min_pixel_value, max_pixel_value = load_cifar10()
-    x_train = np.transpose(x_train, (0, 3, 1, 2)).astype(np.float32)
-    x_test = np.transpose(x_test, (0, 3, 1, 2)).astype(np.float32)
+    x_train = np.transpose(x_train, (0, 3, 1, 2)).astype(np.float32)[:500]
+    x_test = np.transpose(x_test, (0, 3, 1, 2)).astype(np.float32)[:500]
 
-    y_test = np.argmax(y_test, axis=1)
-    y_train = np.argmax(y_train, axis=1)
+    y_test = np.argmax(y_test, axis=1)[:500]
+    y_train = np.argmax(y_train, axis=1)[:500]
 
     if train:
-        return from_numpy_to_dataloader(X=x_train, y=y_train, batch_size=batch_size, shuffle=shuffle)
+        if return_numpy:
+            return [x_train, y_train]
+        else:
+            return from_numpy_to_dataloader(X=x_train, y=y_train, batch_size=batch_size, shuffle=shuffle)
     else:
-        return from_numpy_to_dataloader(X=x_test, y=y_test, batch_size=batch_size, shuffle=shuffle)
+        if return_numpy:
+            return [x_test, y_test]
+        else:
+            return from_numpy_to_dataloader(X=x_test, y=y_test, batch_size=batch_size, shuffle=shuffle)
 
 
 def get_SVHN(batch_size: int, train=False, shuffle=False):
@@ -99,4 +105,8 @@ def get_SVHN(batch_size: int, train=False, shuffle=False):
 
 def get_dataloader(data_name: str, train: bool, batch_size=1, shuffle=False, *args, **kwargs):
     """Returns a dataloader given a dataset"""
-    return get_dataloader_from_dataset_name(dataset_name=data_name, batch_size=batch_size, shuffle=shuffle, train=train)
+    if 'return_numpy' in kwargs.keys():
+        return_numpy = kwargs['return_numpy']
+    else:
+        return_numpy = False
+    return get_dataloader_from_dataset_name(dataset_name=data_name, batch_size=batch_size, shuffle=shuffle, train=train, return_numpy=return_numpy)

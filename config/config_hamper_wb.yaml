@@ -11,8 +11,12 @@ CLASSIFIER:
   loss: 'CE' # loss used to fool the model
 
 DETECTOR:
-  detector_dir: '/scratch/fgranese/detectors_review/results/nss/cifar10/CE/'
+  detector_dir: '/scratch/fgranese/HAMPER/detectors/results/depth/halfspace_mass/cifar10/CE/evaluation/regressor/'
   loss_adv: null # loss used to attack the detector
+
+DEPTH:
+  K : 10000
+  threshold: .5
 
 ADV_CREATION:
   strategy: 'sa'
