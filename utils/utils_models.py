@@ -1,4 +1,7 @@
 import torch
+import numpy as np
+import math
+import torch.nn.functional as F
 from models.detector import Detector
 import torch.optim as optim
 
@@ -85,3 +88,153 @@ def load_detectors(args, model, device, epsilon=None, loss: str = None):
             detectors[i].load_state_dict(checkpoint)
 
     return detectors, optimizers
+
+def extraction_resnet(loader, model, device="cuda", bs=100):
+
+    with torch.no_grad():
+        num_batches = math.ceil(loader.shape[0] / bs)
+        for i in range(num_batches):
+            if i == 0:
+                data = torch.tensor(loader[i * bs: (i + 1) * bs]).to(device)
+                all_hidden_states = { }
+                hidden_states = data
+
+                # Conv1
+                hidden_states = model.conv1(hidden_states)
+
+                # Bn1
+                hidden_states = model.bn1(hidden_states)
+                hidden_states = F.relu(hidden_states)
+
+                # Layer 1
+                hidden_states = model.layer1(hidden_states)
+                all_hidden_states['layer1'] = hidden_states.detach().cpu().numpy()
+
+                # Layer2
+                # Block0
+                # Conv1
+                hidden_states = model.layer2(hidden_states)
+                all_hidden_states['layer2'] = hidden_states.detach().cpu().numpy()
+
+                # Layer3
+                # Block0
+                # Conv1
+                hidden_states = model.layer3(hidden_states)
+                all_hidden_states['layer3'] = hidden_states.detach().cpu().numpy()
+
+                # Layer4
+                # Block0
+                # Conv1
+                inside_hidden_states = model.layer4[0].conv1(hidden_states)
+                all_hidden_states['block-conv_1-layer4-0'] = inside_hidden_states.detach().cpu().numpy()
+                # Bn1
+                inside_hidden_states = F.relu(model.layer4[0].bn1(inside_hidden_states))
+                all_hidden_states['block-bn_1-layer4-0'] = inside_hidden_states.detach().cpu().numpy()
+                # Conv2
+                inside_hidden_states = model.layer4[0].conv2(inside_hidden_states)
+                all_hidden_states['block-conv_2-layer4-0'] = inside_hidden_states.detach().cpu().numpy()
+                # Bn2
+                inside_hidden_states = model.layer4[0].bn2(inside_hidden_states)
+                all_hidden_states['block-bn_2-layer4-0'] = F.relu(inside_hidden_states).detach().cpu().numpy()
+                out_block0_hidden_states = model.layer4[0](hidden_states)
+
+                # Block1
+                # Conv1
+                inside_hidden_states = model.layer4[1].conv1(out_block0_hidden_states)
+                all_hidden_states['block-conv_1-layer4-1'] = inside_hidden_states.detach().cpu().numpy()
+                # Bn1
+                inside_hidden_states = F.relu(model.layer4[1].bn1(inside_hidden_states))
+                all_hidden_states['block-bn_1-layer4-1'] = inside_hidden_states.detach().cpu().numpy()
+                # Conv2
+                inside_hidden_states = model.layer4[1].conv2(inside_hidden_states)
+                all_hidden_states['block-conv_2-layer4-1'] = inside_hidden_states.detach().cpu().numpy()
+                # Bn2
+                inside_hidden_states = model.layer4[1].bn2(inside_hidden_states)
+                all_hidden_states['block-bn_2-layer4-1'] = F.relu(inside_hidden_states).detach().cpu().numpy()
+                out_block1_hidden_states = model.layer4[1](out_block0_hidden_states)
+
+                hidden_states = model.layer4(hidden_states)
+                all_hidden_states['layer4'] = hidden_states.detach().cpu().numpy()
+
+                hidden_states = F.avg_pool2d(hidden_states, 4).view(data.shape[0], -1)
+                all_hidden_states['convolution_end'] = hidden_states.detach().cpu().numpy()
+
+                logits = model.linear(hidden_states)
+                all_hidden_states['logits'] = logits.detach().cpu().numpy()
+                pred = torch.nn.Softmax(dim=1)(logits)
+                all_hidden_states['pred'] = pred.detach().cpu().numpy()
+
+            else:
+                data = torch.tensor(loader[i * bs: (i + 1) * bs]).to(device)
+                hidden_states = data
+
+                # Conv1
+                hidden_states = model.conv1(hidden_states)
+                # Bn1
+                hidden_states = model.bn1(hidden_states)
+                # all_hidden_states['bn1'] = np.concatenate(( all_hidden_states['bn1'], hidden_states.detach().cpu().numpy()), axis=0)
+                hidden_states = F.relu(hidden_states)
+
+                # Layer1
+                # Block0
+                # Conv1
+                hidden_states = model.layer1(hidden_states)
+                all_hidden_states['layer1'] = np.concatenate((all_hidden_states['layer1'], hidden_states.detach().cpu().numpy()), axis=0)
+
+                # Layer2
+                # Block0
+                # Conv1
+                hidden_states = model.layer2(hidden_states)
+                all_hidden_states['layer2'] = np.concatenate((all_hidden_states['layer2'], hidden_states.detach().cpu().numpy()), axis=0)
+
+                # Layer3
+                # Block0
+                # Conv1
+                hidden_states = model.layer3(hidden_states)
+                all_hidden_states['layer3'] = np.concatenate((all_hidden_states['layer3'], hidden_states.detach().cpu().numpy()), axis=0)
+
+                # Layer4
+                # Block0
+                # Conv1
+                inside_hidden_states = model.layer4[0].conv1(hidden_states)
+                all_hidden_states['block-conv_1-layer4-0'] = np.concatenate((all_hidden_states['block-conv_1-layer4-0'], inside_hidden_states.detach().cpu().numpy()), axis=0)
+                # Bn1
+                inside_hidden_states = F.relu(model.layer4[0].bn1(inside_hidden_states))
+                all_hidden_states['block-bn_1-layer4-0'] = np.concatenate((all_hidden_states['block-bn_1-layer4-0'], inside_hidden_states.detach().cpu().numpy()), axis=0)
+                # Conv2
+                inside_hidden_states = model.layer4[0].conv2(inside_hidden_states)
+                all_hidden_states['block-conv_2-layer4-0'] = np.concatenate((all_hidden_states['block-conv_2-layer4-0'], inside_hidden_states.detach().cpu().numpy()), axis=0)
+                # Bn2
+                inside_hidden_states = model.layer4[0].bn2(inside_hidden_states)
+                all_hidden_states['block-bn_2-layer4-0'] = np.concatenate((all_hidden_states['block-bn_2-layer4-0'], F.relu(inside_hidden_states).detach().cpu().numpy()), axis=0)
+                out_block0_hidden_states = model.layer4[0](hidden_states)
+
+                # Block1
+                # Conv1
+                inside_hidden_states = model.layer4[1].conv1(out_block0_hidden_states)
+                all_hidden_states['block-conv_1-layer4-1'] = np.concatenate((all_hidden_states['block-conv_1-layer4-1'], inside_hidden_states.detach().cpu().numpy()), axis=0)
+                # Bn1
+                inside_hidden_states = F.relu(model.layer4[1].bn1(inside_hidden_states))
+                all_hidden_states['block-bn_1-layer4-1'] = np.concatenate((all_hidden_states['block-bn_1-layer4-1'], inside_hidden_states.detach().cpu().numpy()), axis=0)
+                # Conv2
+                inside_hidden_states = model.layer4[1].conv2(inside_hidden_states)
+                all_hidden_states['block-conv_2-layer4-1'] = np.concatenate((all_hidden_states['block-conv_2-layer4-1'], inside_hidden_states.detach().cpu().numpy()), axis=0)
+                # Bn2
+                inside_hidden_states = model.layer4[1].bn2(inside_hidden_states)
+                all_hidden_states['block-bn_2-layer4-1'] = np.concatenate((all_hidden_states['block-bn_2-layer4-1'], F.relu(inside_hidden_states).detach().cpu().numpy()), axis=0)
+                out_block1_hidden_states = model.layer4[1](out_block0_hidden_states)
+
+                hidden_states = model.layer4(hidden_states)
+                all_hidden_states['layer4'] = np.concatenate((all_hidden_states['layer4'], hidden_states.detach().cpu().numpy()), axis=0)
+
+                hidden_states = F.avg_pool2d(hidden_states, 4).view(data.shape[0], -1)
+                all_hidden_states['convolution_end'] = np.concatenate((all_hidden_states['convolution_end'], hidden_states.detach().cpu().numpy()), axis=0)
+
+                logits = model.linear(hidden_states)
+                all_hidden_states['logits'] = np.concatenate((all_hidden_states['logits'], logits.detach().cpu().numpy()), axis=0)
+                pred = torch.nn.Softmax(dim=1)(logits)
+                all_hidden_states['pred'] = np.concatenate((all_hidden_states['pred'], pred.detach().cpu().numpy()), axis=0)
+
+    print(all_hidden_states.keys())
+
+    return all_hidden_states

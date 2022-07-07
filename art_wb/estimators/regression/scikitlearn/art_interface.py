@@ -1,9 +1,9 @@
 import torch
-from art.estimators.classification.pytorch import PyTorchClassifier
+from art.estimators.regression.scikitlearn import ScikitlearnRegressor
 
-class CustomPyTorchClassifier(PyTorchClassifier):
-    def __init__(self, loss_train, **kwargs):
-        kwargs['loss'] = loss_train
+class CustomScikitlearnRegressor(ScikitlearnRegressor):
+    def __init__(self, device_type, **kwargs):
+        self._device_type = device_type
         super().__init__(**kwargs)
 
     def _to_data_parallel(self):
@@ -14,5 +14,3 @@ class CustomPyTorchClassifier(PyTorchClassifier):
             except InterruptedError:
                 print('The current model cannot be parallelized.')
 
-    def _get_last_layer_outs(self, x: torch.Tensor):
-        return self._model(x)[-1]

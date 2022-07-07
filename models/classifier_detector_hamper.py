@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from depth.utils import depth_from_dict, merge_layers_from_dict
-from common.util import extraction_resnet
+from detectors.hamper.utils import extraction_resnet
 import pickle
 import logging
 import numpy as np

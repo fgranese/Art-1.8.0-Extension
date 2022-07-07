@@ -1,0 +1,21 @@
+DATA_NATURAL:
+  data_name: cifar10
+  num_classes: 10
+
+RUN:
+  seed: 1
+  batch_size: 500
+
+CLASSIFIER:
+  classifier_dir: '/scratch/fgranese/Mead-detector/checkpoints/classifiers/' # directory containing the classifier model
+  loss: 'CE' # loss used to fool the model
+
+DETECTOR:
+  detector_dir: '/scratch/fgranese/detectors_review/results/nss/cifar10/CE/'
+  loss_adv: null # loss used to attack the detector
+
+ADV_CREATION:
+  strategy: 'sa'
+  adv_file_path: '/scratch/fgranese/data_projects/FARAD/detectors/adv_data/'
+  alpha:
+    - 1e-3

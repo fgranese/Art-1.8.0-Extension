@@ -35,8 +35,15 @@ def execute_pipeline_plots(alpha=None):
     args_ = attrDict.AttrDict.from_nested_dicts(config_reader_utls.read_file(file_path=config_file_path))
     main_pipeline_plots(args=args_, alphs=alpha)
 
+def execute_pipeline_hamper():
+    from pipelines.pipeline_hamper import main_pipeline_wb
+    from config_reader_utls import attrDict, config_reader_utls
 
+    config_file_path = 'config/config_hamper_wb.yaml'
+    args_ = attrDict.AttrDict.from_nested_dicts(config_reader_utls.read_file(file_path=config_file_path))
+    main_pipeline_wb(args=args_)
 
 if __name__ == '__main__':
-    alphas = [.1, 1, 5, 10]
-    execute_pipeline_plots(alpha=alphas)
+    # alphas = [.1, 1, 5, 10]
+    # execute_pipeline_plots(alpha=alphas)
+    execute_pipeline_hamper()

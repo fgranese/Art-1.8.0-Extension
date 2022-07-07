@@ -10,10 +10,10 @@ def execute_pipeline_salad(loss=None, eps=None, alpha=None):
     acc_c, acc_d = main_pipeline_wb(args=args_, loss=loss, eps=eps, alpha=alpha)
     return acc_c, acc_d
 
-def main_pipeline_plots(args, alphs=None, lss=None):
+def main_pipeline_plots(args, alphs=None):
     alphas = alphs if alphs is not None else args.ADV_CREATION.alpha
     get_colors = lambda n: list(map(lambda i: "#" + "%06x" % random.randint(0, 0xFFFFFF), range(n)))
-    colors = get_colors(len(alphas))
+    colors = ['cyan', 'blue',  'magenta', 'red'] #get_colors(len(alphas))
     markers = ['^', '+', 'x', 'o']
     losses_alpha_dict = [[],[],[],[]]
 
