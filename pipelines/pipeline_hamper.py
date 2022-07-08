@@ -28,7 +28,7 @@ def execute_attack(attack_strategy, common_parameters, threshold, y_train, K, nu
                                     layers=layers,
                                     dict_train=dict_train,
                                     estimator=common_parameters['estimator'],
-                                    max_iter=10,
+                                    max_iter=2,
                                     norm=np.inf,
                                     batch_size=common_parameters['batch_size']
                                     )
@@ -132,6 +132,7 @@ def main_pipeline_wb(args, alpha=None):
                                  'estimator': classifier,
                                  'batch_size': args.RUN.batch_size,
                                  'verbose' : True}
+
     attack, attack_name = execute_attack(attack_strategy=attack_strategy,
                                          common_parameters=parameters_common_attacks,
                                          layers=layers,
@@ -152,8 +153,11 @@ def main_pipeline_wb(args, alpha=None):
     # the y in the method generate is the one given in input or it is computed from the model, usually reformatted as the
     # one-hot encoding of the class classes the x in the method generate is updated to create the adversarial attacks, pass
     # a deepcopy of the initial samples
-    adv_x = attack.generate(x=features_ndarray, y=labels.detach().cpu().numpy())
-    np.save(adv_file_path, adv_x)
+    if os.path.exists(adv_file_path):
+        adv_x = np.load(adv_file_path)
+    else:
+        adv_x = attack.generate(x=features_ndarray, y=labels.detach().cpu().numpy())
+        np.save(adv_file_path, adv_x)
 
     # ------------------------- #
     # ---- Evaluate attack ---- #
@@ -174,14 +178,14 @@ def main_pipeline_wb(args, alpha=None):
     _, labels_det, predictions_det = utils_ml.compute_logits_return_labels_and_predictions(model=detector,
                                                                                            dataloader=data_loader_adv_detector,
                                                                                            device=device,
-                                                                                           threshold=self.DEPTH.threshold)
+                                                                                           threshold=args.DEPTH.threshold)
 
     print('Classifier', utils_ml.compute_accuracy(predictions=predictions_class, targets=labels_class))
     print(predictions_class)
     print(labels_class)
 
-    print('Detector', utils_ml.compute_accuracy(predictions=1 - predictions_det, targets=labels_det))
-    print(predictions_det)
+    print('Detector', utils_ml.compute_accuracy(predictions=1. - predictions_det, targets=labels_det))
+    print(1. - predictions_det)
     print(labels_det)
 
 

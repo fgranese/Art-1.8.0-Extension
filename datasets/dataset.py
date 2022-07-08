@@ -74,11 +74,11 @@ def get_dataloader_from_dataset_name(dataset_name: str, batch_size: int, train: 
 
 def get_CIFAR10(batch_size: int, train=False, shuffle=False, return_numpy=False):
     (x_train, y_train), (x_test, y_test), min_pixel_value, max_pixel_value = load_cifar10()
-    x_train = np.transpose(x_train, (0, 3, 1, 2)).astype(np.float32)[:500]
-    x_test = np.transpose(x_test, (0, 3, 1, 2)).astype(np.float32)[:500]
+    x_train = np.transpose(x_train, (0, 3, 1, 2)).astype(np.float32)[:100]
+    x_test = np.transpose(x_test, (0, 3, 1, 2)).astype(np.float32)[:100]
 
-    y_test = np.argmax(y_test, axis=1)[:500]
-    y_train = np.argmax(y_train, axis=1)[:500]
+    y_test = np.argmax(y_test, axis=1)[:100]
+    y_train = np.argmax(y_train, axis=1)[:100]
 
     if train:
         if return_numpy:

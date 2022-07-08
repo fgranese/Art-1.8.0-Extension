@@ -79,7 +79,7 @@ class SquareAttack_WB_hamper(SquareAttack):
         logit_highest_incorrect = np.take_along_axis(
             y_pred, np.expand_dims(np.argsort(y_pred, axis=1)[:, -2], axis=1), axis=1
         )
-        loss_detect = y_pred_detect.reshape(logit_correct.shape)
+        loss_detect = y_pred_detect.reshape(-1,)
 
         return (logit_correct - logit_highest_incorrect)[:, 0] + lambda_detect * loss_detect
 
