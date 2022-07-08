@@ -64,7 +64,11 @@ def compute_logits_return_labels_and_predictions(model: Union[torch.nn.Module, P
                 if kwargs['print_sp']:
                     print(soft_prob)
             if len(preds_logit.shape) == 1 or (len(preds_logit.shape) > 1 and preds_logit.shape[1] == 1):
-                preds = torch.round(soft_prob)
+                if type(model) in [CustomScikitlearnRegressor, ScikitlearnRegressor]:
+                    threshold = kwargs.get('threshold')
+                    preds = torch.where(soft_prob > threshold, 1, 0)
+                else:
+                    preds = torch.round(soft_prob)
             else:
                 preds = torch.argmax(soft_prob, dim=1)
 

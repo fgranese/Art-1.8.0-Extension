@@ -45,7 +45,6 @@ class SquareAttack_WB_hamper(SquareAttack):
             raise ValueError('The lists have different lengths in: {}'.format(inspect.stack()[1][3]))
         self.alphas_list = detectors_dict['alphas']
         self.detectors_list = detectors_dict['dtctrs']
-        self.alphas_list = detectors_dict['alphas']
         self.loss_dtctrs_list = detectors_dict['loss_dtctrs']
         self.classifier_loss_name = classifier_loss_name
         self.threshold = threshold
@@ -71,8 +70,7 @@ class SquareAttack_WB_hamper(SquareAttack):
                                                   batch_size=self.batch_size,
                                                   layers=self.layers)
 
-        y_pred_detect = torch.Tensor(detector.predict(hamper_features, batch_size=self.batch_size))
-        # y_pred= np.argmax(torch.softmax(logits_class, dim=1).detach().cpu().numpy(), axis=1)
+        y_pred_detect = detector.predict(hamper_features, batch_size=self.batch_size)
         y_pred = logits_class
         # y_pred = self.estimator.predict(x, batch_size=self.batch_size)
         # y_pred_detect = self.detector.predict(x, batch_size=self.batch_detect)
@@ -81,7 +79,7 @@ class SquareAttack_WB_hamper(SquareAttack):
         logit_highest_incorrect = np.take_along_axis(
             y_pred, np.expand_dims(np.argsort(y_pred, axis=1)[:, -2], axis=1), axis=1
         )
-        loss_detect = y_pred_detect.reshape(-1, )
+        loss_detect = y_pred_detect.reshape(logit_correct.shape)
 
         return (logit_correct - logit_highest_incorrect)[:, 0] + lambda_detect * loss_detect
 
@@ -150,10 +148,7 @@ class SquareAttack_WB_hamper(SquareAttack):
             # x_robust = x_adv[sample_is_robust]
             x_robust = x[sample_is_robust]
             y_robust = y_class[sample_is_robust]
-            # x_robust_detector = hamper_features[sample_is_robust]
-            # y_pred_class = np.argmax(torch.softmax(logits_class, dim=1).detach().cpu().numpy(), axis=1)[sample_is_robust]
-            # y_robust_detector = np.where(y_robust == y_pred_class, 0, 1)
-            # sample_loss_init = self.loss(x_robust, y_robust) + self.alphas_list[0] * self.loss(x_robust_detector, y_robust_detector)
+
 
             sample_loss_init = self.loss(x_robust, y_robust, self.alphas_list[0])
 
@@ -173,6 +168,7 @@ class SquareAttack_WB_hamper(SquareAttack):
 
                 sample_loss_new = self.loss(x_robust_new, y_robust, self.alphas_list[0])
                 loss_improved = (sample_loss_new - sample_loss_init) < 0.0
+                loss_improved = loss_improved.reshape(-1)
 
                 x_robust[loss_improved] = x_robust_new[loss_improved]
 
@@ -197,6 +193,7 @@ class SquareAttack_WB_hamper(SquareAttack):
                                                               layers=self.layers)
 
                     prob_det = torch.Tensor(detector.predict(hamper_features, batch_size=self.batch_size))
+                    sample_is_robust = np.logical_not(self.adv_criterion(logits_class, y_class, prob_det, self.threshold))
 
                     if np.sum(sample_is_robust) == 0:
                         break
@@ -233,6 +230,7 @@ class SquareAttack_WB_hamper(SquareAttack):
 
                     sample_loss_new = self.loss(x_robust_new, y_robust, self.alphas_list[0])
                     loss_improved = (sample_loss_new - sample_loss_init) < 0.0
+                    loss_improved = loss_improved.reshape(-1)
 
                     x_robust[loss_improved] = x_robust_new[loss_improved]
 
@@ -310,6 +308,8 @@ class SquareAttack_WB_hamper(SquareAttack):
 
                 sample_loss_new = self.loss(x_robust_new, y_robust, self.alphas_list[0])
                 loss_improved = (sample_loss_new - sample_loss_init) < 0.0
+                loss_improved = loss_improved.reshape(-1)
+
 
                 x_robust[loss_improved] = x_robust_new[loss_improved]
 
@@ -484,6 +484,7 @@ class SquareAttack_WB_hamper(SquareAttack):
 
                     sample_loss_new = self.loss(x_robust_new, y_robust, self.alphas_list[0])
                     loss_improved = (sample_loss_new - sample_loss_init) < 0.0
+                    loss_improved = loss_improved.reshape(-1)
 
                     x_robust[loss_improved] = x_robust_new[loss_improved]
 

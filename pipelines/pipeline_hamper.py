@@ -173,7 +173,8 @@ def main_pipeline_wb(args, alpha=None):
     data_loader_adv_detector = from_numpy_to_dataloader(hamper_features, labels_det, batch_size=args.RUN.batch_size)
     _, labels_det, predictions_det = utils_ml.compute_logits_return_labels_and_predictions(model=detector,
                                                                                            dataloader=data_loader_adv_detector,
-                                                                                           device=device)
+                                                                                           device=device,
+                                                                                           threshold=self.DEPTH.threshold)
 
     print('Classifier', utils_ml.compute_accuracy(predictions=predictions_class, targets=labels_class))
     print(predictions_class)

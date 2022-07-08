@@ -22,4 +22,4 @@ ADV_CREATION:
   strategy: 'sa'
   adv_file_path: '/scratch/fgranese/data_projects/FARAD/detectors/adv_data/'
   alpha:
-    - 1
+    - -1

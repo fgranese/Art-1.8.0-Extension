@@ -115,19 +115,19 @@ def extraction_resnet(loader, model, device="cuda", bs=100):
 
                 # Layer 1
                 hidden_states = model.layer1(hidden_states)
-                all_hidden_states['layer1'] = hidden_states.detach().cpu().numpy()
+                # all_hidden_states['layer1'] = hidden_states.detach().cpu().numpy()
 
                 # Layer2
                 # Block0
                 # Conv1
                 hidden_states = model.layer2(hidden_states)
-                all_hidden_states['layer2'] = hidden_states.detach().cpu().numpy()
+                # all_hidden_states['layer2'] = hidden_states.detach().cpu().numpy()
 
                 # Layer3
                 # Block0
                 # Conv1
                 hidden_states = model.layer3(hidden_states)
-                all_hidden_states['layer3'] = hidden_states.detach().cpu().numpy()
+                # all_hidden_states['layer3'] = hidden_states.detach().cpu().numpy()
 
                 # Layer4
                 # Block0
@@ -182,19 +182,19 @@ def extraction_resnet(loader, model, device="cuda", bs=100):
                 # Block0
                 # Conv1
                 hidden_states = model.layer1(hidden_states)
-                all_hidden_states['layer1'] = np.concatenate((all_hidden_states['layer1'], hidden_states.detach().cpu().numpy()), axis=0)
+                # all_hidden_states['layer1'] = np.concatenate((all_hidden_states['layer1'], hidden_states.detach().cpu().numpy()), axis=0)
 
                 # Layer2
                 # Block0
                 # Conv1
                 hidden_states = model.layer2(hidden_states)
-                all_hidden_states['layer2'] = np.concatenate((all_hidden_states['layer2'], hidden_states.detach().cpu().numpy()), axis=0)
+                # all_hidden_states['layer2'] = np.concatenate((all_hidden_states['layer2'], hidden_states.detach().cpu().numpy()), axis=0)
 
                 # Layer3
                 # Block0
                 # Conv1
                 hidden_states = model.layer3(hidden_states)
-                all_hidden_states['layer3'] = np.concatenate((all_hidden_states['layer3'], hidden_states.detach().cpu().numpy()), axis=0)
+                # all_hidden_states['layer3'] = np.concatenate((all_hidden_states['layer3'], hidden_states.detach().cpu().numpy()), axis=0)
 
                 # Layer4
                 # Block0
