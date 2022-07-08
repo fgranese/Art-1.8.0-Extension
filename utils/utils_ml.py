@@ -42,7 +42,11 @@ def compute_logits_return_labels_and_predictions(model: Union[torch.nn.Module, P
             # isintance() considers every instance an instance of the parent class as well
             elif type(model) in [PyTorchClassifier, CustomPyTorchClassifier]:
                 preds_logit = model._get_last_layer_outs(data.to(device))
-            elif type(model) in [ScikitlearnSVC, CustomScikitlearnSVC, CustomScikitlearnRegressor, ScikitlearnRegressor]:
+            elif type(model) in [ScikitlearnSVC, CustomScikitlearnSVC]:
+                preds_logit = torch.Tensor(model.predict(data))
+            elif type(model) in [CustomScikitlearnRegressor, ScikitlearnRegressor]:
+                if isinstance(data, torch.Tensor):
+                    data = data.detach().cpu().numpy()
                 preds_logit = torch.Tensor(model.predict(data))
             else:
                 raise NotImplementedError
@@ -59,10 +63,11 @@ def compute_logits_return_labels_and_predictions(model: Union[torch.nn.Module, P
             if 'print_sp' in kwargs:
                 if kwargs['print_sp']:
                     print(soft_prob)
-            if preds_logit.shape[1] >= 2:
-                preds = torch.argmax(soft_prob, dim=1)
-            else:
+            if len(preds_logit.shape) == 1 or (len(preds_logit.shape) > 1 and preds_logit.shape[1] == 1):
                 preds = torch.round(soft_prob)
+            else:
+                preds = torch.argmax(soft_prob, dim=1)
+
 
             predictions.append(preds.detach().cpu().reshape(-1, 1))
 

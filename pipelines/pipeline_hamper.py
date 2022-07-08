@@ -28,7 +28,7 @@ def execute_attack(attack_strategy, common_parameters, threshold, y_train, K, nu
                                     layers=layers,
                                     dict_train=dict_train,
                                     estimator=common_parameters['estimator'],
-                                    max_iter=1,
+                                    max_iter=10,
                                     norm=np.inf,
                                     batch_size=common_parameters['batch_size']
                                     )

@@ -47,3 +47,4 @@ if __name__ == '__main__':
     # alphas = [.1, 1, 5, 10]
     # execute_pipeline_plots(alpha=alphas)
     execute_pipeline_hamper()
+    #execute_pipeline_salad()
