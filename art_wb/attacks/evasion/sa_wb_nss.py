@@ -40,9 +40,29 @@ class SquareAttack_WB_nss(SquareAttack):
         self.alphas_list = detectors_dict['alphas']
         self.loss_dtctrs_list = detectors_dict['loss_dtctrs']
         self.classifier_loss_name = classifier_loss_name
+        kwargs['loss'] = self._get_logits_diff_detection
         kwargs['adv_criterion'] = adv_criterion
 
         super().__init__(**kwargs)
+
+    def _get_logits_diff_detection(self, x: np.ndarray, y: np.ndarray, lambda_detect: np.float) -> np.ndarray:
+        logits_class = torch.Tensor(self.estimator.predict(x, batch_size=self.batch_size))
+        detector = self.detectors_list[0]
+        nss_features = compute_nss_features(data=x)
+
+        y_pred_detect = detector.predict(nss_features, batch_size=self.batch_size)
+        y_pred = logits_class
+        # y_pred = self.estimator.predict(x, batch_size=self.batch_size)
+        # y_pred_detect = self.detector.predict(x, batch_size=self.batch_detect)
+
+        logit_correct = np.take_along_axis(y_pred, np.expand_dims(np.argmax(y, axis=1), axis=1), axis=1)
+        logit_highest_incorrect = np.take_along_axis(
+            y_pred, np.expand_dims(np.argsort(y_pred, axis=1)[:, -2], axis=1), axis=1
+        )
+
+        loss_detect = y_pred_detect[:, 1].reshape(-1,)
+
+        return (logit_correct - logit_highest_incorrect)[:, 0] + float(lambda_detect) * loss_detect
 
     def generate(self, x: np.ndarray, y: Optional[np.ndarray] = None, **kwargs) -> np.ndarray:
         """
@@ -102,7 +122,7 @@ class SquareAttack_WB_nss(SquareAttack):
             # x_robust = x_adv[sample_is_robust]
             x_robust = x[sample_is_robust]
             y_robust = y_class[sample_is_robust]
-            sample_loss_init = self.loss(x_robust, y_robust)
+            sample_loss_init = self.loss(x_robust, y_robust, self.alphas_list[0])
 
             if self.norm in [np.inf, "inf"]:
 
@@ -118,8 +138,9 @@ class SquareAttack_WB_nss(SquareAttack):
                     a_max=self.estimator.clip_values[1],
                 ).astype(ART_NUMPY_DTYPE)
 
-                sample_loss_new = self.loss(x_robust_new, y_robust)
+                sample_loss_new = self.loss(x_robust_new, y_robust, self.alphas_list[0])
                 loss_improved = (sample_loss_new - sample_loss_init) < 0.0
+                loss_improved = loss_improved.reshape(-1)
 
                 x_robust[loss_improved] = x_robust_new[loss_improved]
 
@@ -146,7 +167,7 @@ class SquareAttack_WB_nss(SquareAttack):
                     x_init = x[sample_is_robust]
                     y_robust = y_class[sample_is_robust]
 
-                    sample_loss_init = self.loss(x_robust, y_robust)
+                    sample_loss_init = self.loss(x_robust, y_robust, self.alphas_list[0])
 
                     height_tile = max(int(round(math.sqrt(percentage_of_elements * height * width))), 1)
 
@@ -172,8 +193,9 @@ class SquareAttack_WB_nss(SquareAttack):
                         x_robust_new, a_min=self.estimator.clip_values[0], a_max=self.estimator.clip_values[1]
                     ).astype(ART_NUMPY_DTYPE)
 
-                    sample_loss_new = self.loss(x_robust_new, y_robust)
+                    sample_loss_new = self.loss(x_robust_new, y_robust, self.alphas_list[0])
                     loss_improved = (sample_loss_new - sample_loss_init) < 0.0
+                    loss_improved = loss_improved.reshape(-1)
 
                     x_robust[loss_improved] = x_robust_new[loss_improved]
 
@@ -249,8 +271,10 @@ class SquareAttack_WB_nss(SquareAttack):
                     self.estimator.clip_values[1],
                 )
 
-                sample_loss_new = self.loss(x_robust_new, y_robust)
+                sample_loss_new = self.loss(x_robust_new, y_robust, self.alphas_list[0])
                 loss_improved = (sample_loss_new - sample_loss_init) < 0.0
+                loss_improved = loss_improved.reshape(-1)
+
 
                 x_robust[loss_improved] = x_robust_new[loss_improved]
 
@@ -277,7 +301,7 @@ class SquareAttack_WB_nss(SquareAttack):
                     x_init = x[sample_is_robust]
                     y_robust = y[sample_is_robust]
 
-                    sample_loss_init = self.loss(x_robust, y_robust)
+                    sample_loss_init = self.loss(x_robust, y_robust, self.alphas_list[0])
 
                     delta_x_robust_init = x_robust - x_init
 
@@ -417,8 +441,9 @@ class SquareAttack_WB_nss(SquareAttack):
                         self.estimator.clip_values[1],
                     )
 
-                    sample_loss_new = self.loss(x_robust_new, y_robust)
+                    sample_loss_new = self.loss(x_robust_new, y_robust, self.alphas_list[0])
                     loss_improved = (sample_loss_new - sample_loss_init) < 0.0
+                    loss_improved = loss_improved.reshape(-1)
 
                     x_robust[loss_improved] = x_robust_new[loss_improved]
 

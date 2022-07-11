@@ -173,7 +173,7 @@ def main_pipeline_wb(args, loss=None, eps=None, alpha=None):
         dts.append(detector)
 
     #detectors_dict = {'dtctrs': [detector], 'alphas': args.ADV_CREATION.alpha if alpha is None else [alpha], 'loss_dtctrs': [None, None, None, None]}
-    detectors_dict = {'dtctrs': dts, 'alphas': args.ADV_CREATION.alpha if alpha is None else [alpha], 'loss_dtctrs': [None, None, None, None]}
+    detectors_dict = {'dtctrs': dts, 'alphas': args.ADV_CREATION.alpha if alpha is None else alpha, 'loss_dtctrs': [None, None, None, None]}
 
     # --------------------------------- #
     # ---- Perform and save attack ---- #
@@ -195,7 +195,7 @@ def main_pipeline_wb(args, loss=None, eps=None, alpha=None):
                                                             args.DATA_NATURAL.data_name,
                                                             args.DATA_NATURAL.data_name,
                                                             attack_name,
-                                                            args.ADV_CREATION.alpha[0] if alpha is None else alpha
+                                                            args.ADV_CREATION.alpha[0] if alpha is None else alpha[0]
                                                             )
     print(adv_file_path)
 

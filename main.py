@@ -1,4 +1,4 @@
-def execute_pipeline_salad_to_generate_samples_eps(alphas=[.1, 1, 5, 10], losses=['CE', 'KL', 'Rao', 'g'], epsilons=[0.03125, 0.0625, 0.125, 0.25, 0.3125, 0.5]):
+def execute_pipeline_salad_to_generate_samples_eps(alphas=[[.1] *4, [1]*4, [5]*4, [10]*4], losses=['CE', 'KL', 'Rao', 'g'], epsilons=[0.03125, 0.0625, 0.125, 0.25, 0.3125, 0.5]):
     from tabulate import tabulate
 
     accuracies = [['LOSS', 'EPS', 'ALPHA', 'ACC_CLASS', 'ACC_DET']]
@@ -46,5 +46,7 @@ def execute_pipeline_hamper():
 if __name__ == '__main__':
     # alphas = [.1, 1, 5, 10]
     # execute_pipeline_plots(alpha=alphas)
-    execute_pipeline_hamper()
+    #execute_pipeline_hamper()
     #execute_pipeline_salad()
+    #execute_pipeline_salad_to_generate_samples_eps()
+    execute_pipeline_nss()

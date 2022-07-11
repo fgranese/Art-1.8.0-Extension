@@ -22,7 +22,7 @@ def execute_attack(attack_strategy, common_parameters):
     attack = SquareAttack_WB_nss(detectors_dict=common_parameters['detectors_dict'],
                                      classifier_loss_name=common_parameters['classifier_loss_name'],
                                      estimator=common_parameters['estimator'],
-                                     max_iter=1,
+                                     max_iter=10,
                                      norm=np.inf,
                                      batch_size=common_parameters['batch_size']
                                      )
@@ -64,7 +64,7 @@ def main_pipeline_wb(args):
     # transform the classifier in an art kind of network using the interface
     classifier = CustomPyTorchClassifier(
         model=classifier_model,
-        loss=_get_loss_by_name(loss_name=args.CLASSIFIER.loss),
+        loss_train=_get_loss_by_name(loss_name=args.CLASSIFIER.loss),
         input_shape=classifier_input_shape,
         nb_classes=args.DATA_NATURAL.num_classes,
         clip_values=[0, 1]
@@ -102,7 +102,7 @@ def main_pipeline_wb(args):
     # adapt the interface to be parallelized
     detector._to_data_parallel()
 
-    detectors_dict = {'dtctrs': [detector], 'alphas': [0], 'loss_dtctrs': [None]}
+    detectors_dict = {'dtctrs': [detector], 'alphas': args.ADV_CREATION.alpha, 'loss_dtctrs': [None]}
 
     # --------------------------------- #
     # ---- Perform and save attack ---- #
@@ -120,10 +120,11 @@ def main_pipeline_wb(args):
 
     attack, attack_name = execute_attack(attack_strategy=attack_strategy, common_parameters=parameters_common_attacks)
     os.makedirs('{}/{}/white-box-nss/'.format(args.ADV_CREATION.adv_file_path, args.DATA_NATURAL.data_name), exist_ok=True)
-    adv_file_path = '{}/{}/white-box-nss/{}{}.npy'.format(args.ADV_CREATION.adv_file_path,
+    adv_file_path = '{}/{}/white-box-nss/{}{}_alpha_{}.npy'.format(args.ADV_CREATION.adv_file_path,
                                                             args.DATA_NATURAL.data_name,
                                                             args.DATA_NATURAL.data_name,
-                                                            attack_name
+                                                            attack_name,
+                                                            args.ADV_CREATION.alpha[0]
                                                             )
     print(adv_file_path)
 

@@ -17,4 +17,6 @@ DETECTOR:
 ADV_CREATION:
   strategy: 'sa'
   adv_file_path: '/scratch/fgranese/data_projects/FARAD/detectors/adv_data/'
+  alpha: #[1e-3 1e-2 1e-1 1 1e1 1e2 1e3]
+    - 1e-1
 

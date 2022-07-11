@@ -149,7 +149,6 @@ class SquareAttack_WB_hamper(SquareAttack):
             x_robust = x[sample_is_robust]
             y_robust = y_class[sample_is_robust]
 
-
             sample_loss_init = self.loss(x_robust, y_robust, self.alphas_list[0])
 
             if self.norm in [np.inf, "inf"]:
