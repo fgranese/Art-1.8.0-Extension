@@ -22,18 +22,18 @@ DETECTOR:
   nesterov: False
 #  loss: 'Rao' # loss used to train the detector we are loading
   loss_adv: null # loss used to attack the detector
-  beta: -1
+  beta: 1000.0
   epsilon: 0.125
   resume_epoch: 100 # checkpoint to load at testing time or epoch to resume training
 
 ADV_CREATION:
-  epsilon: 5
+  epsilon: 0.25
   norm: 'inf' # 1, 2, 'inf', np.inf
   strategy: 'bim' # pgd, fgsm, bim, sa, cwi
-  adv_file_path: '/scratch/fgranese/data_projects/FARAD/detectors/adv_data/'
+  adv_file_path: '/scratch/fgranese/data_projects/FARAD/detectors/adv_data/white-box-1000/'
   alpha:
-    - 1
-    - 1
-    - 1
-    - 1
+    - 0.1
+    - 0.1
+    - 0.1
+    - 0.1
 

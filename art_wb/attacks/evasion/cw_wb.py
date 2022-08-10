@@ -6,7 +6,7 @@ import numpy as np
 from tqdm.auto import trange
 from art.config import ART_NUMPY_DTYPE
 from typing import Optional, Tuple, TYPE_CHECKING
-from art_wb.attacks.evasion.pgd_wb import create_labels_detector
+from art_wb.attacks.evasion.pgd import create_labels_detector
 from art.utils import check_and_transform_label_format
 from art.attacks.evasion.carlini import CarliniLInfMethod
 from art.utils import compute_success, get_labels_np_array, tanh_to_original, original_to_tanh
@@ -19,13 +19,18 @@ logger = logging.getLogger(__name__)
 
 class CarliniLInfMethod_WB(CarliniLInfMethod):
     def __init__(self, detectors_dict: dict, classifier_loss_name: str, **kwargs):
-        assert len(detectors_dict['dtctrs']) > 0, 'At least one detector must be passed'
-        lsts = [detectors_dict['dtctrs'], detectors_dict['alphas'], detectors_dict['loss_dtctrs']]
-        if not all(len(lsts[0]) == len(l) for l in lsts[1:]):
-            raise ValueError('The lists have different lengths in: {}'.format(inspect.stack()[1][3]))
-        self.detectors_list = detectors_dict['dtctrs']
-        self.alphas_list = detectors_dict['alphas']
-        self.loss_dtctrs_list = detectors_dict['loss_dtctrs']
+        #assert len(detectors_dict['dtctrs']) > 0, 'At least one detector must be passed'
+        if len(detectors_dict) == 0:
+            self.detectors_list = []
+            self.alphas_list = []
+            self.loss_dtctrs_list = []
+        else:
+            lsts = [detectors_dict['dtctrs'], detectors_dict['alphas'], detectors_dict['loss_dtctrs']]
+            if not all(len(lsts[0]) == len(l) for l in lsts[1:]):
+                raise ValueError('The lists have different lengths in: {}'.format(inspect.stack()[1][3]))
+            self.detectors_list = detectors_dict['dtctrs']
+            self.alphas_list = detectors_dict['alphas']
+            self.loss_dtctrs_list = detectors_dict['loss_dtctrs']
         self.classifier_loss_name = classifier_loss_name
         super().__init__(**kwargs)
 
@@ -211,12 +216,17 @@ class CarliniLInfMethod_WB(CarliniLInfMethod):
                         clip_min[active_and_update_adv],
                         clip_max[active_and_update_adv],
                     )
+
                     (z_logits[active_and_update_adv], loss[active_and_update_adv],) = self._loss(
                         x_adv_batch[active_and_update_adv],
                         y_batch[active_and_update_adv],
                     )
-                    attack_success = loss <= 0
 
+                    attack_success = loss <= 100#0.5, 4, 40, 40
+                    #print(active_and_update_adv)
+                    print(int(np.sum(attack_success)))
+
+            # print(int(np.sum(attack_success)))
             # Update depending on attack success:
             x_adv_batch[~attack_success] = x_batch[~attack_success]
             x_adv[batch_index_1:batch_index_2] = x_adv_batch
@@ -290,9 +300,9 @@ def loss_internal_detector(x_adv: np.ndarray, confidence, estimator, batch_size,
     :return: A tuple of current predictions, total loss, logits loss and regularisation loss.
     """
     preds = estimator.predict(np.array(x_adv, dtype=ART_NUMPY_DTYPE), batch_size=batch_size)
-    # target_detector = np.zeros((preds.shape[0], 2))
-    # for i in range(target_detector.shape[0]):
-    #     target_detector[i, 0] = 1
+    target_detector = np.zeros((preds.shape[0], 2))
+    for i in range(target_detector.shape[0]):
+        target_detector[i, 0] = 1
 
     z_predicted = detector.predict(preds, batch_size=batch_size)
     target_detector = create_labels_detector(logits_class=torch.Tensor(preds),

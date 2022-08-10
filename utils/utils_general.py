@@ -52,10 +52,17 @@ def logging_info(args, file_path):
 
     return logger
 
+def from_dataloader_to_numpy(dataloader, index=0):
+    cache_list = list(iter(dataloader))
+    assert len(cache_list) > 0
+    assert index < len(cache_list[0])
+    result_list = np.array(list(map(lambda x: x[index].numpy(), cache_list)))
+    return result_list
 
 def from_numpy_to_dataloader(X, y, batch_size=100, shuffle=False):
-    tensor_x = torch.Tensor(X)  # transform to torch tensor
-    tensor_y = torch.Tensor(y)
+
+    tensor_x = torch.Tensor(X.astype(float)) if isinstance(X, np.ndarray) else X  # transform to torch tensor
+    tensor_y = torch.Tensor(y.astype(float)) if isinstance(y, np.ndarray) else y
 
     dataset = TensorDataset(tensor_x, tensor_y)  # create your datset
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)  # create your dataloader

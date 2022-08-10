@@ -20,13 +20,18 @@ logger = logging.getLogger(__name__)
 
 class ProjectedGradientDescent_WB(ProjectedGradientDescentPyTorch):
     def __init__(self, detectors_dict: dict, classifier_loss_name: str, **kwargs):
-        assert len(detectors_dict['dtctrs']) > 0, 'At least one detector must be passed'
-        lsts = [detectors_dict['dtctrs'], detectors_dict['alphas'], detectors_dict['loss_dtctrs']]
-        if not all(len(lsts[0]) == len(l) for l in lsts[1:]):
-            raise ValueError('The lists have different lengths in: {}'.format(inspect.stack()[1][3]))
-        self.detectors_list = detectors_dict['dtctrs']
-        self.alphas_list = detectors_dict['alphas']
-        self.loss_dtctrs_list = detectors_dict['loss_dtctrs']
+        #assert len(detectors_dict['dtctrs']) > 0, 'At least one detector must be passed'
+        if len(detectors_dict) == 0:
+            self.detectors_list = []
+            self.alphas_list = []
+            self.loss_dtctrs_list = []
+        else:
+            lsts = [detectors_dict['dtctrs'], detectors_dict['alphas'], detectors_dict['loss_dtctrs']]
+            if not all(len(lsts[0]) == len(l) for l in lsts[1:]):
+                raise ValueError('The lists have different lengths in: {}'.format(inspect.stack()[1][3]))
+            self.detectors_list = detectors_dict['dtctrs']
+            self.alphas_list = detectors_dict['alphas']
+            self.loss_dtctrs_list = detectors_dict['loss_dtctrs']
         self.classifier_loss_name = classifier_loss_name
         kwargs['num_random_init'] = 1
         super().__init__(**kwargs)
@@ -330,10 +335,10 @@ def get_composite_gradient(classifier, classifier_loss_name, detectors_list, alp
 
         dtctr_outs = detector._get_last_layer_outs(classifier_outs)
         # print(dtctr_outs)
-        # dtctr_target = torch.zeros(y_cold_version.shape).reshape(-1, 1).to(detector.device)
+        #dtctr_target = torch.zeros(y_cold_version.shape).reshape(-1, 1).to(detector.device)
         dtctr_target = create_labels_detector(logits_class=classifier_outs,
-                                              y_class=y,
-                                              device=detector.device)
+                                               y_class=y,
+                                               device=detector.device)
         loss += alpha * detector_loss(dtctr_outs, dtctr_target)
         # print(loss)
 
@@ -346,7 +351,9 @@ def create_labels_detector(logits_class, y_class, device):
     if not isinstance(y_class, np.ndarray):
         y_class = y_class.detach().cpu().numpy()
     y_class = np.argmax(y_class, axis=1)
+    # print(y_class.shape)
     y_det_1 = np.where(y_pred_class == y_class, 0, 1)
+   # print(y_det_1)
     # # print((y_det_1))
     #
     # filter_ = y_pred_class != y_class

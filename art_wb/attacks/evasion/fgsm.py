@@ -3,7 +3,7 @@ import inspect
 import logging
 import numpy as np
 from tqdm import tqdm
-from art_wb.attacks.evasion import pgd_wb
+from art_wb.attacks.evasion import pgd
 from typing import Optional, Union
 from art.config import ART_NUMPY_DTYPE
 from art.utils import projection, random_sphere
@@ -14,13 +14,17 @@ logger = logging.getLogger(__name__)
 
 class FastGradientSignMethod_WB(FastGradientMethod):
     def __init__(self, detectors_dict: dict, classifier_loss_name: str, **kwargs):
-        assert len(detectors_dict['dtctrs']) > 0, 'At least one detector must be passed'
-        lsts = [detectors_dict['dtctrs'], detectors_dict['alphas'], detectors_dict['loss_dtctrs']]
-        if not all(len(lsts[0]) == len(l) for l in lsts[1:]):
-            raise ValueError('The lists have different lengths in: {}'.format(inspect.stack()[1][3]))
-        self.detectors_list = detectors_dict['dtctrs']
-        self.alphas_list = detectors_dict['alphas']
-        self.loss_dtctrs_list = detectors_dict['loss_dtctrs']
+        if len(detectors_dict) == 0:
+            self.detectors_list = []
+            self.alphas_list = []
+            self.loss_dtctrs_list = []
+        else:
+            lsts = [detectors_dict['dtctrs'], detectors_dict['alphas'], detectors_dict['loss_dtctrs']]
+            if not all(len(lsts[0]) == len(l) for l in lsts[1:]):
+                raise ValueError('The lists have different lengths in: {}'.format(inspect.stack()[1][3]))
+            self.detectors_list = detectors_dict['dtctrs']
+            self.alphas_list = detectors_dict['alphas']
+            self.loss_dtctrs_list = detectors_dict['loss_dtctrs']
         self.classifier_loss_name = classifier_loss_name
         kwargs['num_random_init'] = 1
         super().__init__(**kwargs)
@@ -32,14 +36,14 @@ class FastGradientSignMethod_WB(FastGradientMethod):
         # Get gradient wrt loss; invert it if attack is targeted
         # grad = self.estimator.loss_gradient(x, y) * (1 - 2 * int(self.targeted))
 
-        grad = pgd_wb.get_composite_gradient(classifier=self.estimator,
-                                             classifier_loss_name=self.classifier_loss_name,
-                                             detectors_list=self.detectors_list,
-                                             alphas_list=self.alphas_list,
-                                             loss_dtctrs_list=self.loss_dtctrs_list,
-                                             x=x,
-                                             x_init=x_init,
-                                             y=y)
+        grad = pgd.get_composite_gradient(classifier=self.estimator,
+                                          classifier_loss_name=self.classifier_loss_name,
+                                          detectors_list=self.detectors_list,
+                                          alphas_list=self.alphas_list,
+                                          loss_dtctrs_list=self.loss_dtctrs_list,
+                                          x=x,
+                                          x_init=x_init,
+                                          y=y)
 
         # Write summary
         if self.summary_writer is not None:  # pragma: no cover

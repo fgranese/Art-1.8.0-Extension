@@ -1,4 +1,4 @@
-from art_wb.attacks.evasion.pgd_wb import ProjectedGradientDescent_WB
+from art_wb.attacks.evasion.pgd import ProjectedGradientDescent_WB
 
 class BasicIterativeMethod_WB(ProjectedGradientDescent_WB):
     def __init__(self, **kwargs):

@@ -50,6 +50,7 @@ class SquareAttack_WB_nss(SquareAttack):
         detector = self.detectors_list[0]
         nss_features = compute_nss_features(data=x)
 
+        # print(np.any(np.isnan(nss_features)))
         y_pred_detect = detector.predict(nss_features, batch_size=self.batch_size)
         y_pred = logits_class
         # y_pred = self.estimator.predict(x, batch_size=self.batch_size)

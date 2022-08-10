@@ -3,10 +3,11 @@ import sys
 import inspect
 import numpy as np
 from art.utils import load_cifar10
-from utils.utils_general import from_numpy_to_dataloader
+from utils.utils_general import from_numpy_to_dataloader, from_dataloader_to_numpy
 
 CIFAR10 = 'CIFAR10'
 SVHN = 'SVHN'
+CIFAR100 = 'CIFAR100'
 
 
 def prep_folder(path: str, to_file: bool = False):
@@ -67,6 +68,8 @@ def get_dataloader_from_dataset_name(dataset_name: str, batch_size: int, train: 
         dataloader = get_CIFAR10(batch_size=batch_size, train=train, shuffle=shuffle, return_numpy=return_numpy)
     elif dataset_name == SVHN:
         dataloader = get_SVHN(batch_size=batch_size, train=train, shuffle=shuffle, return_numpy=return_numpy)
+    elif dataset_name == CIFAR100:
+        dataloader = get_CIFAR100(batch_size=batch_size, train=train, shuffle=shuffle, return_numpy=return_numpy)
     else:
         sys.exit('Requested dataset not available.')
     return dataloader
@@ -92,15 +95,56 @@ def get_CIFAR10(batch_size: int, train=False, shuffle=False, return_numpy=False)
             return from_numpy_to_dataloader(X=x_test, y=y_test, batch_size=batch_size, shuffle=shuffle)
 
 
-def get_SVHN(batch_size: int, train=False, shuffle=False):
+def get_SVHN(batch_size: int, train=False, shuffle=False, return_numpy=False):
     (x_train, y_train), (x_test, y_test), min_pixel_value, max_pixel_value = load_svhn_data()
     x_train = np.transpose(x_train, (0, 3, 1, 2)).astype(np.float32) / 255.
     x_test = np.transpose(x_test, (0, 3, 1, 2)).astype(np.float32) / 255.
 
     if train:
-        return from_numpy_to_dataloader(X=x_train, y=y_train, batch_size=batch_size, shuffle=shuffle)
+        if return_numpy:
+            return [x_train, y_train]
+        else:
+            return from_numpy_to_dataloader(X=x_train, y=y_train, batch_size=batch_size, shuffle=shuffle)
     else:
-        return from_numpy_to_dataloader(X=x_test, y=y_test, batch_size=batch_size, shuffle=shuffle)
+        if return_numpy:
+            return [x_test, y_test]
+        else:
+            return from_numpy_to_dataloader(X=x_test, y=y_test, batch_size=batch_size, shuffle=shuffle)
+
+def get_CIFAR100(batch_size: int, train=False, shuffle=False, return_numpy=False):
+    from torchvision import datasets, transforms
+    from torch.utils.data import DataLoader
+    data_man = datasets.CIFAR100
+    transform_train = transforms.Compose([
+        transforms.RandomCrop(32, padding=4),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+    ])
+    transform_test = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+    ])
+    if train:
+        train_dataset = data_man('data/', train=True, download=True, transform=transform_train)
+        train_set = DataLoader(train_dataset, batch_size=batch_size, shuffle=shuffle)
+        if return_numpy:
+            x_train = from_dataloader_to_numpy(train_set)
+            x_train = x_train.reshape((x_train.shape[0] * x_train.shape[1], x_train.shape[2], x_train.shape[3], x_train.shape[4]))
+            y_train = np.asarray(train_dataset.targets)
+            return [x_train, y_train]
+        else:
+            return train_set
+    else:
+        test_dataset = data_man('data/', train=False, download=True, transform=transform_test)
+        test_set = DataLoader(test_dataset, batch_size=batch_size, shuffle=shuffle)
+        if return_numpy:
+            x_test = from_dataloader_to_numpy(test_set)
+            x_test = x_test.reshape((x_test.shape[0] * x_test.shape[1], x_test.shape[2], x_test.shape[3], x_test.shape[4]))
+            y_test = np.asarray(test_dataset.targets)
+            return [x_test, y_test]
+        else:
+            return test_set
 
 
 def get_dataloader(data_name: str, train: bool, batch_size=1, shuffle=False, *args, **kwargs):

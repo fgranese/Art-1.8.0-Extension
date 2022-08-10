@@ -36,9 +36,26 @@ class SquareAttack_WB_network(SquareAttack):
         self.alphas_list = detectors_dict['alphas']
         self.loss_dtctrs_list = detectors_dict['loss_dtctrs']
         self.classifier_loss_name = classifier_loss_name
+        kwargs['loss'] = self._get_logits_diff_detection
         kwargs['adv_criterion'] = adv_criterion
 
         super().__init__(**kwargs)
+
+    def _get_logits_diff_detection(self, x: np.ndarray, y: np.ndarray, lambda_detect: np.float) -> np.ndarray:
+        logits_class = torch.Tensor(self.estimator.predict(x, batch_size=self.batch_size))
+        y_pred = logits_class
+
+        logit_correct = np.take_along_axis(y_pred, np.expand_dims(np.argmax(y, axis=1), axis=1), axis=1)
+        logit_highest_incorrect = np.take_along_axis(y_pred, np.expand_dims(np.argsort(y_pred, axis=1)[:, -2], axis=1), axis=1)
+
+        loss_detectors = []
+        for detector in self.detectors_list:
+            logits_det = torch.Tensor(detector.predict(logits_class, batch_size=self.batch_size))
+            y_pred_detect = np.round(torch.sigmoid(logits_det).detach().cpu().numpy())
+            loss_detect = y_pred_detect#[:, 1].reshape(-1,)
+            loss_detectors.append(loss_detect)
+
+        return (logit_correct - logit_highest_incorrect)[:, 0] + np.sum([float(lambda_detect) * loss_detect for loss_detect in loss_detectors])
 
     def generate(self, x: np.ndarray, y: Optional[np.ndarray] = None, **kwargs) -> np.ndarray:
         """
@@ -84,11 +101,18 @@ class SquareAttack_WB_network(SquareAttack):
 
         for _ in trange(self.nb_restarts, desc="SquareAttack - restarts", disable=not self.verbose, ascii=True):
 
-            # Determine correctly predicted samples classifier and detector (predict returns logits)
+            # Determine correctly predicted samples
             logits_class = torch.Tensor(self.estimator.predict(x_adv, batch_size=self.batch_size))
-            detector = self.detectors_list[0]
-            logits_det = torch.Tensor(detector.predict(logits_class, batch_size=self.batch_size))
-            sample_is_robust = np.logical_not(self.adv_criterion(logits_class, y_class, logits_det))
+            sample_is_robust = np.ones((logits_class.shape[0],), dtype=bool)
+            for detector in self.detectors_list:
+                logits_det = torch.Tensor(detector.predict(logits_class, batch_size=self.batch_size))
+                sample_is_robust_detector = np.logical_not(self.adv_criterion(logits_class, y_class, logits_det))
+                sample_is_robust = np.logical_and(sample_is_robust, sample_is_robust_detector)
+            # # Determine correctly predicted samples classifier and detector (predict returns logits)
+            # logits_class = torch.Tensor(self.estimator.predict(x_adv, batch_size=self.batch_size))
+            # detector = self.detectors_list[0]
+            # logits_det = torch.Tensor(detector.predict(logits_class, batch_size=self.batch_size))
+            # sample_is_robust = np.logical_not(self.adv_criterion(logits_class, y_class, logits_det))
 
             if np.sum(sample_is_robust) == 0:
                 break
@@ -96,7 +120,7 @@ class SquareAttack_WB_network(SquareAttack):
             # x_robust = x_adv[sample_is_robust]
             x_robust = x[sample_is_robust]
             y_robust = y_class[sample_is_robust]
-            sample_loss_init = self.loss(x_robust, y_robust)
+            sample_loss_init = self.loss(x_robust, y_robust, self.alphas_list[0])
 
             if self.norm in [np.inf, "inf"]:
 
@@ -112,8 +136,10 @@ class SquareAttack_WB_network(SquareAttack):
                     a_max=self.estimator.clip_values[1],
                 ).astype(ART_NUMPY_DTYPE)
 
-                sample_loss_new = self.loss(x_robust_new, y_robust)
+                sample_loss_new = self.loss(x_robust_new, y_robust, self.alphas_list[0])
+                #sample_loss_new = self.loss(x_robust_new, y_robust)
                 loss_improved = (sample_loss_new - sample_loss_init) < 0.0
+                loss_improved = loss_improved.reshape(-1)
 
                 x_robust[loss_improved] = x_robust_new[loss_improved]
 
@@ -127,9 +153,11 @@ class SquareAttack_WB_network(SquareAttack):
 
                     # Determine correctly predicted samples
                     logits_class = torch.Tensor(self.estimator.predict(x_adv, batch_size=self.batch_size))
-                    detector = self.detectors_list[0]
-                    logits_det = torch.Tensor(detector.predict(logits_class, batch_size=self.batch_size))
-                    sample_is_robust = np.logical_not(self.adv_criterion(logits_class, y_class, logits_det))
+                    sample_is_robust = np.ones((logits_class.shape[0],), dtype=bool)
+                    for detector in self.detectors_list:
+                        logits_det = torch.Tensor(detector.predict(logits_class, batch_size=self.batch_size))
+                        sample_is_robust_detector = np.logical_not(self.adv_criterion(logits_class, y_class, logits_det))
+                        sample_is_robust = np.logical_and(sample_is_robust, sample_is_robust_detector)
 
                     # y_pred = self.estimator.predict(x_adv, batch_size=self.batch_size)
                     # sample_is_robust = np.logical_not(self.adv_criterion(y_pred, y))
@@ -141,7 +169,7 @@ class SquareAttack_WB_network(SquareAttack):
                     x_init = x[sample_is_robust]
                     y_robust = y_class[sample_is_robust]
 
-                    sample_loss_init = self.loss(x_robust, y_robust)
+                    sample_loss_init = self.loss(x_robust, y_robust, self.alphas_list[0])
 
                     height_tile = max(int(round(math.sqrt(percentage_of_elements * height * width))), 1)
 
@@ -167,7 +195,7 @@ class SquareAttack_WB_network(SquareAttack):
                         x_robust_new, a_min=self.estimator.clip_values[0], a_max=self.estimator.clip_values[1]
                     ).astype(ART_NUMPY_DTYPE)
 
-                    sample_loss_new = self.loss(x_robust_new, y_robust)
+                    sample_loss_new = self.loss(x_robust_new, y_robust, self.alphas_list[0])
                     loss_improved = (sample_loss_new - sample_loss_init) < 0.0
 
                     x_robust[loss_improved] = x_robust_new[loss_improved]
@@ -244,7 +272,7 @@ class SquareAttack_WB_network(SquareAttack):
                     self.estimator.clip_values[1],
                 )
 
-                sample_loss_new = self.loss(x_robust_new, y_robust)
+                sample_loss_new = self.loss(x_robust_new, y_robust, self.alphas_list[0])
                 loss_improved = (sample_loss_new - sample_loss_init) < 0.0
 
                 x_robust[loss_improved] = x_robust_new[loss_improved]
@@ -259,9 +287,15 @@ class SquareAttack_WB_network(SquareAttack):
 
                     # Determine correctly predicted samples
                     logits_class = torch.Tensor(self.estimator.predict(x_adv, batch_size=self.batch_size))
-                    detector = self.detectors_list[0]
-                    logits_det = torch.Tensor(detector.predict(logits_class, batch_size=self.batch_size))
-                    sample_is_robust = np.logical_not(self.adv_criterion(logits_class, y_class, logits_det))
+                    sample_is_robust = np.ones((logits_class.shape[0],), dtype=bool)
+                    for detector in self.detectors_list:
+                        logits_det = torch.Tensor(detector.predict(logits_class, batch_size=self.batch_size))
+                        sample_is_robust_detector = np.logical_not(self.adv_criterion(logits_class, y_class, logits_det))
+                        sample_is_robust = np.logical_and(sample_is_robust, sample_is_robust_detector)
+                    # logits_class = torch.Tensor(self.estimator.predict(x_adv, batch_size=self.batch_size))
+                    # detector = self.detectors_list[0]
+                    # logits_det = torch.Tensor(detector.predict(logits_class, batch_size=self.batch_size))
+                    # sample_is_robust = np.logical_not(self.adv_criterion(logits_class, y_class, logits_det))
                     # y_pred = self.estimator.predict(x_adv, batch_size=self.batch_size)
                     # sample_is_robust = np.logical_not(self.adv_criterion(y_pred, y))
 
@@ -272,7 +306,7 @@ class SquareAttack_WB_network(SquareAttack):
                     x_init = x[sample_is_robust]
                     y_robust = y[sample_is_robust]
 
-                    sample_loss_init = self.loss(x_robust, y_robust)
+                    sample_loss_init = self.loss(x_robust, y_robust, self.alphas_list[0])
 
                     delta_x_robust_init = x_robust - x_init
 
@@ -412,7 +446,7 @@ class SquareAttack_WB_network(SquareAttack):
                         self.estimator.clip_values[1],
                     )
 
-                    sample_loss_new = self.loss(x_robust_new, y_robust)
+                    sample_loss_new = self.loss(x_robust_new, y_robust, self.alphas_list[0])
                     loss_improved = (sample_loss_new - sample_loss_init) < 0.0
 
                     x_robust[loss_improved] = x_robust_new[loss_improved]

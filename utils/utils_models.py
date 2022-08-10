@@ -7,6 +7,7 @@ import torch.optim as optim
 from tqdm import tqdm
 from art_wb.estimators.classification.pytorch.art_interface import CustomPyTorchClassifier, PyTorchClassifier
 
+
 def create_detectors(args, model, device, **kwargs):
     detectors = []
     optimizers = []
@@ -41,11 +42,23 @@ def load_model(dataset_name, checkpoints_dir, device):
         from models.resnet import ResNet18
         path = '{}{}/rn-best.pt'.format(checkpoints_dir, dataset_name)
         model = ResNet18(num_classes=10)
+    elif dataset_name == 'cifar100':
+        from models.resnet_cifar100 import ResNet, Bottleneck
+        from collections import OrderedDict
+        path = '{}{}/resnet/model_best.pth.tar'.format(checkpoints_dir, dataset_name)
+        model = ResNet(Bottleneck, [18, 18, 18], num_classes=100)
+        # exit()
+        checkpoint = torch.load(path)
+        state_dict_ = checkpoint["state_dict"]
+        state_dict = OrderedDict()
+        for k, v in state_dict_.items():
+            name = k[7:]
+            state_dict[name] = v
     else:
         exit(dataset_name + " not present")
-
     if torch.cuda.is_available():
-        state_dict = torch.load(path)
+        if dataset_name != 'cifar100':
+            state_dict = torch.load(path)
         model.load_state_dict(state_dict)
         model = model.to(device)
     else:
@@ -73,9 +86,9 @@ def load_detectors(args, model, device, epsilon=None, loss: str = None):
         if use_cuda:
             detectors[i] = detectors[i].to(device)
 
-        p = '{}/{}/{}_-1_{}/detector_epoch_{}.pt'.format(args.DETECTOR.detector_dir, args.DATA_NATURAL.data_name,
-                                                         loss_train,
-                                                         args.TRAIN.PGDi.epsilon if epsilon is None else epsilon, epoch)
+        p = '{}/{}/{}_1000.0_{}/detector_epoch_{}.pt'.format(args.DETECTOR.detector_dir, args.DATA_NATURAL.data_name,
+                                                             loss_train,
+                                                             args.TRAIN.PGDi.epsilon if epsilon is None else epsilon, epoch)
         print(p)
         checkpoint = torch.load(p, map_location=device)
 
@@ -89,7 +102,6 @@ def load_detectors(args, model, device, epsilon=None, loss: str = None):
             detectors[i].load_state_dict(checkpoint)
 
     return detectors, optimizers
-
 
 
 def extraction_resnet(loader, model, device="cuda", bs=100):

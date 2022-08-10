@@ -94,6 +94,8 @@ def asymmetric_generalized_gaussian_fit(x):
     def mean_squares_sum(x, filter=lambda z: z == z):
         filtered_values = x[filter(x)]
         squares_sum = np.sum(filtered_values ** 2)
+        if filtered_values.shape[0] == 0:
+            return [0]
         return squares_sum / ((filtered_values.shape))
 
     def estimate_gamma(x):
@@ -157,6 +159,7 @@ def calculate_pair_product_coefficients(mscn_coefficients):
 def calculate_brisque_features(image, kernel_size=7, sigma=7 / 6):
     def calculate_features(coefficients_name, coefficients, accum=np.array([])):
         alpha, mean, sigma_l, sigma_r = asymmetric_generalized_gaussian_fit(coefficients)
+        #print(alpha, mean, sigma_l, sigma_r)
 
         if coefficients_name == 'GGD':
             var = (sigma_l ** 2 + sigma_r ** 2) / 2

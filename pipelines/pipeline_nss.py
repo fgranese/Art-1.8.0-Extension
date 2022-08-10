@@ -20,17 +20,15 @@ def execute_attack(attack_strategy, common_parameters):
     assert attack_strategy == 'sa', 'Attack not implemented'
 
     attack = SquareAttack_WB_nss(detectors_dict=common_parameters['detectors_dict'],
-                                     classifier_loss_name=common_parameters['classifier_loss_name'],
-                                     estimator=common_parameters['estimator'],
-                                     max_iter=10,
-                                     norm=np.inf,
-                                     batch_size=common_parameters['batch_size']
-                                     )
+                                 classifier_loss_name=common_parameters['classifier_loss_name'],
+                                 estimator=common_parameters['estimator'],
+                                 max_iter=10,
+                                 norm=np.inf,
+                                 batch_size=common_parameters['batch_size']
+                                 )
     attack_name = "_sa"
 
     return attack, attack_name
-
-
 
 def main_pipeline_wb(args):
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
@@ -102,7 +100,7 @@ def main_pipeline_wb(args):
     # adapt the interface to be parallelized
     detector._to_data_parallel()
 
-    detectors_dict = {'dtctrs': [detector], 'alphas': args.ADV_CREATION.alpha, 'loss_dtctrs': [None]}
+    detectors_dict = {'dtctrs': [detector], 'alphas': args.ADV_CREATION.alpha, 'loss_dtctrs': [None, None, None, None]}
 
     # --------------------------------- #
     # ---- Perform and save attack ---- #
