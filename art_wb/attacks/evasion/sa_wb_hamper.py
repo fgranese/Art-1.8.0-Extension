@@ -17,16 +17,16 @@ logger = logging.getLogger(__name__)
 
 
 def compute_hamper_features(data, classifier, layers_dict_train, y_train, K, layers, num_classes, batch_size):
-    from detectors.hamper.utils_depth import  depth_from_dict, merge_layers_from_dict
+    from detectors.hamper.utils_depth import depth_from_dict, merge_layers_from_dict
     from utils.utils_models import extraction_resnet
     from sklearn import preprocessing
-
     layers_dic_test = extraction_resnet(data, classifier, bs=batch_size)
     depth_dic = depth_from_dict(dict_train=layers_dict_train, y_train=y_train, dict_test=layers_dic_test, K=K, layers=layers, num_classes=num_classes)
     combined_layers = merge_layers_from_dict(dict=depth_dic, num_classes=num_classes, layers_names=layers)  # Combine layers
     combined_layers = preprocessing.normalize(combined_layers)
 
     return combined_layers
+
 
 def adv_criterion(logits_class, y_class, prob_det, threshold):
     prob_det = prob_det.detach().cpu().numpy()
@@ -58,19 +58,19 @@ class SquareAttack_WB_hamper(SquareAttack):
 
         super().__init__(**kwargs)
 
-    def _get_logits_diff_detection(self, x: np.ndarray, y: np.ndarray, lambda_detect: np.float) -> np.ndarray:
+    def _get_logits_diff_detection(self, x: np.ndarray, y: np.ndarray, lambda_detect: np.float, hamper_feature=None) -> np.ndarray:
         logits_class = torch.Tensor(self.estimator.predict(x, batch_size=self.batch_size))
         detector = self.detectors_list[0]
-        hamper_features = compute_hamper_features(data=x,
-                                                  classifier=self.estimator,
-                                                  layers_dict_train=self.dict_train,
-                                                  y_train=self.y_train,
-                                                  K=self.K,
-                                                  num_classes=self.num_classes,
-                                                  batch_size=self.batch_size,
-                                                  layers=self.layers)
-
-        y_pred_detect = detector.predict(hamper_features, batch_size=self.batch_size)
+        if hamper_feature is None:
+            hamper_feature = compute_hamper_features(data=x,
+                                                     classifier=self.estimator,
+                                                     layers_dict_train=self.dict_train,
+                                                     y_train=self.y_train,
+                                                     K=self.K,
+                                                     num_classes=self.num_classes,
+                                                     batch_size=self.batch_size,
+                                                     layers=self.layers)
+        y_pred_detect = detector.predict(hamper_feature, batch_size=self.batch_size)
         y_pred = logits_class
         # y_pred = self.estimator.predict(x, batch_size=self.batch_size)
         # y_pred_detect = self.detector.predict(x, batch_size=self.batch_detect)
@@ -79,7 +79,7 @@ class SquareAttack_WB_hamper(SquareAttack):
         logit_highest_incorrect = np.take_along_axis(
             y_pred, np.expand_dims(np.argsort(y_pred, axis=1)[:, -2], axis=1), axis=1
         )
-        loss_detect = y_pred_detect.reshape(-1,)
+        loss_detect = y_pred_detect.reshape(-1, )
 
         return (logit_correct - logit_highest_incorrect)[:, 0] + lambda_detect * loss_detect
 
@@ -149,7 +149,7 @@ class SquareAttack_WB_hamper(SquareAttack):
             x_robust = x[sample_is_robust]
             y_robust = y_class[sample_is_robust]
 
-            sample_loss_init = self.loss(x_robust, y_robust, self.alphas_list[0])
+            sample_loss_init = self.loss(x_robust, y_robust, self.alphas_list[0], hamper_features)
 
             if self.norm in [np.inf, "inf"]:
 
@@ -201,7 +201,7 @@ class SquareAttack_WB_hamper(SquareAttack):
                     x_init = x[sample_is_robust]
                     y_robust = y_class[sample_is_robust]
 
-                    sample_loss_init = self.loss(x_robust, y_robust, self.alphas_list[0])
+                    sample_loss_init = self.loss(x_robust, y_robust, self.alphas_list[0], hamper_features)
 
                     height_tile = max(int(round(math.sqrt(percentage_of_elements * height * width))), 1)
 
@@ -309,7 +309,6 @@ class SquareAttack_WB_hamper(SquareAttack):
                 loss_improved = (sample_loss_new - sample_loss_init) < 0.0
                 loss_improved = loss_improved.reshape(-1)
 
-
                 x_robust[loss_improved] = x_robust_new[loss_improved]
 
                 x_adv[sample_is_robust] = x_robust
@@ -341,7 +340,7 @@ class SquareAttack_WB_hamper(SquareAttack):
                     x_init = x[sample_is_robust]
                     y_robust = y[sample_is_robust]
 
-                    sample_loss_init = self.loss(x_robust, y_robust, self.alphas_list[0])
+                    sample_loss_init = self.loss(x_robust, y_robust, self.alphas_list[0], hamper_features)
 
                     delta_x_robust_init = x_robust - x_init
 

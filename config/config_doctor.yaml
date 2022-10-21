@@ -1,17 +1,21 @@
 DATA_NATURAL:
-  data_name: cifar100
-  num_classes: 100
+  data_name: FLARE
+  num_classes: 5
 
 RUN:
   seed: 1
-  batch_size: 1000
+  batch_size: 1
 
 CLASSIFIER:
   classifier_dir: '/scratch/fgranese/Mead-detector/checkpoints/classifiers/' # directory containing the classifier model
-  loss: 'CE' # loss used to fool the model
+  loss: 'g_upper' # loss used to fool the model
+  model_type: 'margin'
 
 ADV_CREATION:
-  epsilon: 70
-  norm: 1 # 1, 2, 'inf', np.inf
-  strategy: 'pgd' # pgd, fgsm, bim, sa, cwi
+  train: False
+  epsilon:  0.00035
+  T: 1.0
+  norm: 'np.inf'  # 1, 2, 'inf', np.inf
+  strategy: 'fgsm' # pgd, fgsm, bim, sa, cwi
   adv_file_path: '/scratch/fgranese/data_projects/FARAD/detectors/adv_data/'
+

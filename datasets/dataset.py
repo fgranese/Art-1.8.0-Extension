@@ -6,8 +6,9 @@ from art.utils import load_cifar10
 from utils.utils_general import from_numpy_to_dataloader, from_dataloader_to_numpy
 
 CIFAR10 = 'CIFAR10'
-SVHN = 'SVHN'
 CIFAR100 = 'CIFAR100'
+SVHN = 'SVHN'
+FLARE = 'FLARE'
 
 
 def prep_folder(path: str, to_file: bool = False):
@@ -20,7 +21,6 @@ def prep_folder(path: str, to_file: bool = False):
             tmp += path_to_list_of_strings[i] + "/"
         path = tmp
     os.makedirs(path, exist_ok=True)
-
 
 def load_svhn_data():
     from subprocess import call
@@ -62,7 +62,7 @@ def load_svhn_data():
     return (x_train, y_train), (x_test, y_test), min, max
 
 
-def get_dataloader_from_dataset_name(dataset_name: str, batch_size: int, train: bool, shuffle=False, return_numpy=False):
+def get_dataloader_from_dataset_name(dataset_name: str, batch_size: int, train: bool, shuffle=False, return_numpy=False, **kwargs):
     dataset_name = dataset_name.upper()
     if dataset_name == CIFAR10:
         dataloader = get_CIFAR10(batch_size=batch_size, train=train, shuffle=shuffle, return_numpy=return_numpy)
@@ -70,6 +70,12 @@ def get_dataloader_from_dataset_name(dataset_name: str, batch_size: int, train: 
         dataloader = get_SVHN(batch_size=batch_size, train=train, shuffle=shuffle, return_numpy=return_numpy)
     elif dataset_name == CIFAR100:
         dataloader = get_CIFAR100(batch_size=batch_size, train=train, shuffle=shuffle, return_numpy=return_numpy)
+    elif dataset_name == FLARE:
+        if 'score_folder_name' in kwargs.keys():
+            score_folder_name = kwargs['score_folder_name']
+            dataloader = get_FLARE(batch_size=batch_size, train=False, shuffle=False, return_numpy=return_numpy, score_folder_name=score_folder_name)
+        else:
+            dataloader = get_FLARE(batch_size=batch_size, train=False, shuffle=False, return_numpy=return_numpy)
     else:
         sys.exit('Requested dataset not available.')
     return dataloader
@@ -145,6 +151,66 @@ def get_CIFAR100(batch_size: int, train=False, shuffle=False, return_numpy=False
             return [x_test, y_test]
         else:
             return test_set
+
+
+def get_FLARE(batch_size: int, train=False, shuffle=False, return_numpy=False, score_folder_name='scores_margin'):
+    import warnings
+
+    warnings.warn("Only the testset is available for this dataset")
+
+    import glob
+    import h5py
+
+    def read_h5_images(folder):
+        filelist = glob.glob(folder + "/*.h5")
+        files = {}
+        for fpath in filelist:
+            with h5py.File(fpath, "r") as hf:
+                img = hf["img"][:]
+                img = np.expand_dims(img, axis=1)
+                files[os.path.basename(fpath)] = img
+        return files
+
+    def read_h5_masks(folder):
+        filelist = glob.glob(folder + "/*.h5")
+        files = {}
+        for fpath in filelist:
+            with h5py.File(fpath, "r") as hf:
+                mask = hf["mask"][:]
+                mask = np.expand_dims(mask, axis=1)
+                files[os.path.basename(fpath)] = mask
+        return files
+
+    def read_h5_score_files(folder):
+        filelist = glob.glob(folder + "/*.h5")
+        files = {}
+        for fpath in filelist:
+            with h5py.File(fpath, "r") as hf:
+                probs = hf["prob"][:]
+                files[os.path.basename(fpath)] = probs
+        return files
+
+    folder = "flare_test_softmax"
+    score_folder = f"{folder}/{score_folder_name}/"
+    label_folder = f"{folder}/vols/"
+
+    images = read_h5_images(label_folder)
+    masks = read_h5_masks(label_folder)
+    probs = read_h5_score_files(score_folder)
+
+    images = {k: v for k, v in images.items() if k in probs}
+    masks = {k: v for k, v in masks.items() if k in probs}
+
+    images = np.concatenate(list(map(lambda x: x[1], sorted(images.items()))), 0)
+    masks = np.concatenate(list(map(lambda x: x[1], sorted(masks.items()))), 0)
+
+    print(images.shape)
+    print(masks.shape)
+
+    if return_numpy:
+        return [images, masks]
+
+    return from_numpy_to_dataloader(X=images, y=masks, batch_size=batch_size, shuffle=shuffle)
 
 
 def get_dataloader(data_name: str, train: bool, batch_size=1, shuffle=False, *args, **kwargs):

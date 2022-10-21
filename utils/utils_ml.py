@@ -72,7 +72,6 @@ def compute_logits_return_labels_and_predictions(model: Union[torch.nn.Module, P
             else:
                 preds = torch.argmax(soft_prob, dim=1)
 
-
             predictions.append(preds.detach().cpu().reshape(-1, 1))
 
             labels.append(target.detach().cpu().reshape(-1, 1))

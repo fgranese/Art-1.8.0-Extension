@@ -30,6 +30,7 @@ def execute_attack(attack_strategy, common_parameters):
 
     return attack, attack_name
 
+
 def main_pipeline_wb(args):
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
     print(device)
@@ -93,14 +94,14 @@ def main_pipeline_wb(args):
     # transform the classifier in an art kind of network using the interface
     detector = CustomScikitlearnSVC(
         model=detector_model,
-        clip_values=[0,1],
+        clip_values=[0, 1],
         device_type=device
     )
 
     # adapt the interface to be parallelized
     detector._to_data_parallel()
 
-    detectors_dict = {'dtctrs': [detector], 'alphas': args.ADV_CREATION.alpha, 'loss_dtctrs': [None, None, None, None]}
+    detectors_dict = {'dtctrs': [detector], 'alphas': args.ADV_CREATION.alpha, 'loss_dtctrs': [None]}
 
     # --------------------------------- #
     # ---- Perform and save attack ---- #
@@ -114,23 +115,26 @@ def main_pipeline_wb(args):
                                  'classifier_loss_name': args.CLASSIFIER.loss,
                                  'estimator': classifier,
                                  'batch_size': args.RUN.batch_size,
-                                 'verbose' : True}
+                                 'verbose': True}
 
     attack, attack_name = execute_attack(attack_strategy=attack_strategy, common_parameters=parameters_common_attacks)
     os.makedirs('{}/{}/white-box-nss/'.format(args.ADV_CREATION.adv_file_path, args.DATA_NATURAL.data_name), exist_ok=True)
     adv_file_path = '{}/{}/white-box-nss/{}{}_alpha_{}.npy'.format(args.ADV_CREATION.adv_file_path,
-                                                            args.DATA_NATURAL.data_name,
-                                                            args.DATA_NATURAL.data_name,
-                                                            attack_name,
-                                                            args.ADV_CREATION.alpha[0]
-                                                            )
+                                                                   args.DATA_NATURAL.data_name,
+                                                                   args.DATA_NATURAL.data_name,
+                                                                   attack_name,
+                                                                   args.ADV_CREATION.alpha[0]
+                                                                   )
     print(adv_file_path)
 
-    # the y in the method generate is the one given in input or it is computed from the model, usually reformatted as the
-    # one-hot encoding of the class classes the x in the method generate is updated to create the adversarial attacks, pass
-    # a deepcopy of the initial samples
-    adv_x = attack.generate(x=features_ndarray, y=labels.detach().cpu().numpy())
-    np.save(adv_file_path, adv_x)
+    if os.path.exists(adv_file_path):
+        adv_x = np.load(adv_file_path)
+    else:
+        # the y in the method generate is the one given in input or it is computed from the model, usually reformatted as the
+        # one-hot encoding of the class classes the x in the method generate is updated to create the adversarial attacks, pass
+        # a deepcopy of the initial samples
+        adv_x = attack.generate(x=features_ndarray, y=labels.detach().cpu().numpy())
+        np.save(adv_file_path, adv_x)
 
     # ------------------------- #
     # ---- Evaluate attack ---- #
@@ -159,5 +163,3 @@ def main_pipeline_wb(args):
     print('Detector', utils_ml.compute_accuracy(predictions=predictions_det, targets=labels_det))
     print(predictions_det)
     print(labels_det)
-
-

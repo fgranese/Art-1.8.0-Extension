@@ -2,7 +2,7 @@ import os
 import logging
 import numpy as np
 from detectors.hamper.data_depth import DataDepth, sampled_sphere
-from utils.utils_models import extraction_resnet
+from tqdm import tqdm
 
 def depth_by_class(depth, X_train, X_test, y_train, c, layer, U=None):
     if len(y_train.shape) > 1:
@@ -22,7 +22,7 @@ def merge_layers_from_dict(dict, num_classes, layers_names):
 
 def depth_from_dict(dict_train, y_train, dict_test, K, layers, num_classes):
     from collections import defaultdict
-    logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.INFO)
+    #logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.INFO)
     features = defaultdict(list)
     depth = DataDepth(K)
     depth_res = {}
@@ -30,7 +30,8 @@ def depth_from_dict(dict_train, y_train, dict_test, K, layers, num_classes):
     for i in range(len(layers)):
         layer = layers[i]
         depth_res[layer] = []
-        for c in range(num_classes):
+        print('Depth from dict resnet', layer)
+        for c in tqdm(range(num_classes), ncols=70, colour='yellow', ascii=True):
             X_test = dict_test[layer]
             #logging.info(X_test.shape)
             X_train = dict_train[layer]

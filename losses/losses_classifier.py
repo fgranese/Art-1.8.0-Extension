@@ -23,6 +23,15 @@ class gLoss(torch.nn.Module):
         return (1 - (pyx ** 0.5)).sum(0)
 
 
+class gLoss_upper(torch.nn.Module):
+    def __init__(self):
+        super(gLoss_upper, self).__init__()
+
+    def forward(self, preds):
+        pyx = (preds.softmax(1) ** 2).sum(1)
+        return (1 - pyx).sum(0)
+
+
 class CrossEntropyLoss(torch.nn.CrossEntropyLoss):
     def __init__(self):
         super(CrossEntropyLoss, self).__init__()
@@ -43,7 +52,7 @@ class KLLoss(torch.nn.KLDivLoss):
 
 
 def _get_loss_by_name(loss_name: str):
-    assert loss_name in ['CE', 'KL', 'Rao', 'g', 'BCE']
+    assert loss_name in ['CE', 'KL', 'Rao', 'g', 'BCE', 'g_upper']
     if loss_name == 'CE':
         return CrossEntropyLoss()
     elif loss_name == 'KL':
@@ -52,12 +61,14 @@ def _get_loss_by_name(loss_name: str):
         return RaoLoss()
     elif loss_name == 'g':
         return gLoss()
+    elif loss_name == 'g_upper':
+        return gLoss_upper()
     elif loss_name == 'BCE':
         return torch.nn.BCEWithLogitsLoss()
 
 
 def global_loss(loss_name, preds, nat, y):
-    assert loss_name in ['CE', 'KL', 'Rao', 'g']
+    assert loss_name in ['CE', 'KL', 'Rao', 'g', 'g_upper']
 
     loss = _get_loss_by_name(loss_name=loss_name)
 
@@ -67,5 +78,5 @@ def global_loss(loss_name, preds, nat, y):
         return loss(preds, nat)
     elif loss_name == 'Rao':
         return loss(preds, nat)
-    elif loss_name == 'g':
+    elif loss_name in ['g', 'g_upper']:
         return loss(preds)

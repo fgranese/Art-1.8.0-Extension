@@ -52,10 +52,20 @@ def execute_pipeline_default(loss=None, eps=None, alpha=None):
     acc_c, acc_d = main_pipeline(args=args_, loss=loss, eps=eps, alpha=alpha)
     return acc_c, acc_d
 
+def execute_pipeline_doctor(loss=None, eps=None, alpha=None):
+    from pipelines.pipeline_doctor import main_pipeline
+    from config_reader_utls import attrDict, config_reader_utls
+
+    config_file_path = 'config/config_doctor.yaml'
+    args_ = attrDict.AttrDict.from_nested_dicts(config_reader_utls.read_file(file_path=config_file_path))
+    acc_c, acc_d = main_pipeline(args=args_, loss=loss, eps=eps, alpha=alpha)
+    return acc_c, acc_d
+
 if __name__ == '__main__':
     alphas = [[1000, 200, 10, 2000]]#[.1, 1, 5, 10]
+    execute_pipeline_doctor()
     #execute_pipeline_plots(alpha=alphas)
     #execute_pipeline_hamper()
-    execute_pipeline_default()
+    #execute_pipeline_default()
     #execute_pipeline_salad_to_generate_samples_eps(epsilons=[0.125, 0.25, 0.3125, 0.5, 1, 1.5, 2])
     #execute_pipeline_nss()

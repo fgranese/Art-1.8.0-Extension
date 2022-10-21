@@ -1,6 +1,6 @@
 DATA_NATURAL:
-  data_name: svhn
-  num_classes: 10
+  data_name: cifar10
+  num_classes: 100
 
 RUN:
   seed: 1
@@ -11,7 +11,7 @@ CLASSIFIER:
   loss: 'CE' # loss used to fool the model
 
 DETECTOR:
-  detector_dir: '/scratch/fgranese/detectors_review/results/nss/svhn/CE_pgdi_0.03125/'
+  detector_dir: '/scratch/fgranese/detectors_review/results/nss/cifar100/CE_pgdi_0.03125/'
   loss_adv: null # loss used to attack the detector
 
 ADV_CREATION:
@@ -19,4 +19,3 @@ ADV_CREATION:
   adv_file_path: '/scratch/fgranese/data_projects/FARAD/detectors/adv_data/'
   alpha: #[1e-3 1e-2 1e-1 1 1e1 1e2 1e3]
     - 1e3
-

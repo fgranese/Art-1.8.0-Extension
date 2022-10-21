@@ -312,7 +312,7 @@ class ProjectedGradientDescent_WB(ProjectedGradientDescentPyTorch):
         return self.num_random_init
 
 
-def get_composite_gradient(classifier, classifier_loss_name, detectors_list, alphas_list, loss_dtctrs_list, x, x_init, y):
+def get_composite_gradient(classifier, classifier_loss_name, detectors_list, alphas_list, loss_dtctrs_list, x, x_init, y, T=1.0, **kwargs):
     if type(x) == np.ndarray:
         x = torch.Tensor(x).to(classifier.device)
     if type(x_init) == np.ndarray:
@@ -321,8 +321,9 @@ def get_composite_gradient(classifier, classifier_loss_name, detectors_list, alp
         y = torch.Tensor(y).to(classifier.device)
 
     x = x.detach().requires_grad_()
-    classifier_outs = classifier._get_last_layer_outs(x)
-    classifier_outs_init = classifier._get_last_layer_outs(x_init)
+    classifier_outs = classifier._get_last_layer_outs(x) / T
+    classifier_outs_init = classifier._get_last_layer_outs(x_init) / T
+
     y_cold_version = torch.argmax(y, dim=1)
 
     loss = losses_classifier.global_loss(loss_name=classifier_loss_name,
@@ -337,10 +338,13 @@ def get_composite_gradient(classifier, classifier_loss_name, detectors_list, alp
         # print(dtctr_outs)
         #dtctr_target = torch.zeros(y_cold_version.shape).reshape(-1, 1).to(detector.device)
         dtctr_target = create_labels_detector(logits_class=classifier_outs,
-                                               y_class=y,
-                                               device=detector.device)
+                                              y_class=y,
+                                              device=detector.device)
         loss += alpha * detector_loss(dtctr_outs, dtctr_target)
         # print(loss)
+
+    if 'segmentation' in kwargs.keys():
+        loss = torch.sum(loss)
 
     grad = torch.autograd.grad(loss, [x], allow_unused=True)[0]
     return grad

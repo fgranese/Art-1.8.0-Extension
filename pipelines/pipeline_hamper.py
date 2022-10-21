@@ -28,15 +28,13 @@ def execute_attack(attack_strategy, common_parameters, threshold, y_train, K, nu
                                     layers=layers,
                                     dict_train=dict_train,
                                     estimator=common_parameters['estimator'],
-                                    max_iter=2,
+                                    max_iter=10,
                                     norm=np.inf,
                                     batch_size=common_parameters['batch_size']
                                     )
     attack_name = "_sa"
 
     return attack, attack_name
-
-
 
 def main_pipeline_wb(args, alpha=None):
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
@@ -91,6 +89,8 @@ def main_pipeline_wb(args, alpha=None):
 
     # let us consider the case in which this function always only returns a single detector as it has been the case so far
     model_path = '{}ridge_2.pt'.format(args.DETECTOR.detector_dir)
+    print(model_path)
+    # exit()
     detector_model = pickle.load(open(model_path, 'rb'))
 
     args.DETECTOR.loss_adv = 'BCE' if args.DETECTOR.loss_adv is None else args.DETECTOR.loss_adv
@@ -98,7 +98,7 @@ def main_pipeline_wb(args, alpha=None):
     # transform the classifier in an art kind of network using the interface
     detector = CustomScikitlearnRegressor(
         model=detector_model,
-        clip_values=[0,1],
+        clip_values=[0, 1],
         device_type=device
     )
 
@@ -121,6 +121,13 @@ def main_pipeline_wb(args, alpha=None):
                   for n_block in [0, 1]]
         layers += ['layer4', 'convolution_end', 'logits']
         num_classes = 10
+    elif args.DATA_NATURAL.data_name in ['cifar100']:
+        layers = ['block-{}-{}-{}'.format(b_layer, n_layer, n_block)
+                  for b_layer in ['bn_1', 'bn_2', 'conv_1', 'conv_2']
+                  for n_layer in ['layer3']
+                  for n_block in [0, 1]]
+        layers += ['layer3', 'convolution_end', 'logits']
+        num_classes = 100
 
     data_loader_train = get_dataloader(data_name=args.DATA_NATURAL.data_name, train=True, batch_size=args.RUN.batch_size)
     y_train = get_dataloader(data_name=args.DATA_NATURAL.data_name, train=True, batch_size=args.RUN.batch_size, return_numpy=True)[1]
